@@ -5,19 +5,7 @@ import chess_analysis
 import chess_plot
 
 
-def main():
-
-    engine = chess_analysis.connect_to_stockfish()
-
-    # Open PGN file
-    filename = "kasparov_karpov_1986"
-    chess_io.init_folder_structure(filename)
-    # filename = "kramnik_leko_2001"
-    # filename = "lcc2017"
-    pgn = chess_io.open_pgn(filename)
-
-    # for i in range(35):
-    #    act_game = chess.pgn.read_game(pgn)
+def analyse(engine, pgn):
 
     act_game = chess_analysis.read_game(pgn)
 
@@ -159,6 +147,34 @@ def main():
     chess_io.write_dict_to_csv(filename, counts)
 
     return 0
+
+
+def main():
+
+    engine = chess_analysis.connect_to_stockfish()
+
+    # Open PGN file
+    # filename = "kasparov_karpov_1986"
+    # filename = "kramnik_leko_2001"
+    filename = "lcc2017"
+    chess_io.init_folder_structure(filename)
+    pgn = chess_io.open_pgn(filename)
+
+    # for i in range(35):
+    #   act_game = chess.pgn.read_game(pgn)
+
+    while True:
+        act_game = chess.pgn.read_game(pgn)
+        if act_game is None:
+            break
+
+        print(act_game.headers["Event"] + " / " + act_game.headers["White"] +
+              " - " + act_game.headers["Black"] + "  " + act_game.headers["Result"] +
+              " / " + act_game.headers["Date"])
+
+        # analyse(engine, pgn)
+
+
 
 
 main()

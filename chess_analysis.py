@@ -12,6 +12,10 @@ def connect_to_stockfish():
     return chess.engine.SimpleEngine.popen_uci("engine/stockfish_10_x64.exe")
 
 
+def read_game(pgn):
+    return chess.pgn.read_game(pgn)
+
+
 # Convert the board from the FEN notation to an 3 dimensional array for easier evaluation
 def fen_to_tensor(input_str):
     pieces_str = "PNBRQK"
