@@ -7,6 +7,11 @@ import copy
 import numpy as np
 
 
+# Connect program with the chess engine Stockfish via UCI
+def connect_to_stockfish():
+    return chess.engine.SimpleEngine.popen_uci("engine/stockfish_10_x64.exe")
+
+
 # Convert the board from the FEN notation to an 3 dimensional array for easier evaluation
 def fen_to_tensor(input_str):
     pieces_str = "PNBRQK"
@@ -62,23 +67,6 @@ def rook_ending(fen):
         return True
     else:
         return False
-
-
-# Determines how many pieces of the current player are being threatend by the opponent
-def compute_attackers(board):
-    pieces = board.piece_map()
-
-    attacked_pieces = list()
-    for square, piece in pieces.items():
-        attackers = [i for i in board.attackers(not piece.color, square) if
-                     i > 0 and board.piece_at(i).color != board.turn]
-        attacker_types = [board.piece_at(i).symbol() for i in attackers]
-
-        for a in attackers:
-            # attacked_pieces.append([chess.SQUARE_NAMES[a], pieces[a].symbol(), chess.SQUARE_NAMES[square], piece.symbol()])
-            attacked_pieces.append(chess.Move(a, square))
-
-    return attacked_pieces
 
 
 # Calculates the score for a move
@@ -162,7 +150,24 @@ def categorize_best_move_score_diff(best_move_score_diff, best_move, actual_move
     return category
 
 
-def compute_guarded_pieces(board):
+# Determines how many pieces of the current player are being threatend by the opponent
+def compute_attack_moves(board):
+    pieces = board.piece_map()
+
+    attack_moves = list()
+    for square, piece in pieces.items():
+        attackers = [i for i in board.attackers(not piece.color, square) if
+                     i > 0 and board.piece_at(i).color != board.turn]
+        attacker_types = [board.piece_at(i).symbol() for i in attackers]
+
+        for a in attackers:
+            # attacked_pieces.append([chess.SQUARE_NAMES[a], pieces[a].symbol(), chess.SQUARE_NAMES[square], piece.symbol()])
+            attack_moves.append(chess.Move(a, square))
+
+    return attack_moves
+
+
+def compute_guard_moves(board):
     c_board = copy.deepcopy(board)
 
     # loop over one colors pieces
@@ -171,7 +176,7 @@ def compute_guarded_pieces(board):
     # print(pieces)
     bait_piece = chess.Piece(chess.QUEEN, not c_board.turn)
     count = 0
-    guarded_pieces = list()
+    guard_moves = list()
     for square, piece in pieces.items():
         if piece.color == c_board.turn:
             p = c_board.remove_piece_at(square);
@@ -180,7 +185,7 @@ def compute_guarded_pieces(board):
             for mov in c_board.legal_moves:
                 if mov.to_square == square and c_board.is_capture(mov):
                     # guarded_pieces.append([chess.SQUARE_NAMES[mov.from_square], pieces[mov.from_square].symbol(), chess.SQUARE_NAMES[square], piece.symbol()])
-                    guarded_pieces.append(mov)
+                    guard_moves.append(mov)
             c_board.remove_piece_at(square)
             c_board.set_piece_at(square, p)
 
@@ -188,7 +193,19 @@ def compute_guarded_pieces(board):
         # loop over legal_moves
         # count moves to removed piece position
 
-    return guarded_pieces
+    return guard_moves
+
+
+def compute_captures(board):
+    return [i for i in board.legal_moves if board.is_capture(i)]
+
+
+def compute_from_square_pieces(moves):
+    return set(i.from_square for i in moves)
+
+
+def compute_to_square_pieces(moves):
+    return set(i.to_square for i in moves)
 
 
 def compute_threatened_guarded_pieces(threatened_pieces, guarded_pieces):
@@ -204,17 +221,25 @@ def compute_threatened_guarded_pieces(threatened_pieces, guarded_pieces):
             if threatening_move.to_square == guarding_move.to_square:
                 if threatening_move.to_square not in threatened_guarded_pieces.get('square'):
                     threatened_guarded_pieces.get('square').append(guarding_move.to_square)
+                if threatening_move not in threatened_guarded_pieces.get('threatening_move'):
                     threatened_guarded_pieces.get('threatening_move').append(threatening_move)
+                if guarding_move not in threatened_guarded_pieces.get('guarding_move'):
                     threatened_guarded_pieces.get('guarding_move').append(guarding_move)
-                else:
-                    if threatening_move is threatened_guarded_pieces.get('threatening_move'):
-                        threatened_guarded_pieces.get('threatening_move').append(threatening_move)
-                    if guarding_move is threatened_guarded_pieces.get('guarding_move'):
-                        threatened_guarded_pieces.get('guarding_move').append(guarding_move)
 
     return threatened_guarded_pieces
 
 
-# Connect program with the chess engine Stockfish via UCI
-def connect_to_stockfish():
-    return chess.engine.SimpleEngine.popen_uci("engine/stockfish_10_x64.exe")
+def compute_unopposed_threats(threatened_pieces, guarded_pieces):
+    unopposed_threats = set()
+    for threatened_piece in threatened_pieces:
+        if threatened_piece not in guarded_pieces:
+            unopposed_threats.add(threatened_piece)
+
+    return unopposed_threats
+
+
+def format_move(move):
+    # [chess.SQUARE_NAMES[mov.from_square], pieces[mov.from_square].symbol(), chess.SQUARE_NAMES[square], piece.symbol()]
+    return [chess.SQUARE_NAMES[move.from_square], chess.SQUARE_NAMES[move.to_square]]
+
+

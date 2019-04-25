@@ -45,13 +45,19 @@ def main():
         "rookending": [],  # stores if only kings, rooks and possible pawns are left on the board
         "attackers": [],
         "attackers_count": [],  # stores the number of possible attacks/threats by the opponent
+        "threatened_pieces": [],
+        "threatened_pieces_count": [],
         "is_capture_count": [],  # stores the number of possible captures
         "is_castling": [],  # stores if the king has been castled
         "next_move_count": [],  # stores the number of possible moves for the next player
+        "guards": [],
+        "guards_count": [],
         "guarded_pieces": [],
         "guarded_pieces_count": [],
         "threatened_guarded_pieces": [],
-        "threatened_guarded_pieces_count": []
+        "threatened_guarded_pieces_count": [],
+        "threatened_guarded_pieces_info": [],
+        "unopposed_threats_count": []
     }
 
     # Get the intial board of the game
@@ -87,19 +93,31 @@ def main():
         counts["pawnending"].append(chess_analysis.pawn_ending(board.fen()))
         counts["rookending"].append(chess_analysis.rook_ending(board.fen()))
 
-        attacked_pieces = chess_analysis.compute_attackers(board)
-        counts["attackers"].append(attacked_pieces)
-        counts["attackers_count"].append(len(attacked_pieces))
-        counts["is_capture_count"].append(len([i for i in board.legal_moves if board.is_capture(i)]))
+        attack_moves = chess_analysis.compute_attack_moves(board)
+        attackers = chess_analysis.compute_from_square_pieces(attack_moves)
+        counts["attackers"].append(attackers)
+        counts["attackers_count"].append(len(attackers))
+        threatened_pieces = chess_analysis.compute_to_square_pieces(attack_moves)
+        counts["threatened_pieces"].append(threatened_pieces)
+        counts["threatened_pieces_count"].append(len(threatened_pieces))
+        captures = chess_analysis.compute_captures(board)
+        counts["is_capture_count"].append(len(captures))
 
-        guarded_pieces = chess_analysis.compute_guarded_pieces(board)
-        # print(guarded_pieces)
+        guard_moves = chess_analysis.compute_guard_moves(board)
+        guards = chess_analysis.compute_from_square_pieces(guard_moves)
+        counts["guards"].append(guards)
+        counts["guards_count"].append(len(guards))
+        guarded_pieces = chess_analysis.compute_to_square_pieces(guard_moves)
         counts["guarded_pieces"].append(guarded_pieces)
         counts["guarded_pieces_count"].append(len(guarded_pieces))
-        threatened_guarded_pieces = chess_analysis.compute_threatened_guarded_pieces(attacked_pieces, guarded_pieces)
+
+        threatened_guarded_pieces = chess_analysis.compute_threatened_guarded_pieces(attack_moves, guard_moves)
         counts["threatened_guarded_pieces"].append(threatened_guarded_pieces)
         counts["threatened_guarded_pieces_count"].append(len(threatened_guarded_pieces.get('square')))
-
+        # counts["threatened_guarded_pieces_count"].append(len(threatened_pieces) - len(guarded_pieces))
+        unopposed_threats = chess_analysis.compute_unopposed_threats(threatened_pieces, guarded_pieces)
+        counts["unopposed_threats_count"].append(unopposed_threats)
+        print("threatened_pieces:", len(threatened_pieces), "guarded_pieces:", len(guarded_pieces), "tg_pieces:", len(threatened_pieces) - len(guarded_pieces), "unopposed:", unopposed_threats)
         move_cnt = len([i for i in board.legal_moves])
         counts["next_move_count"].append(move_cnt)
         # remove move to calculate the best move as well as the difference between the best move and the actual move
