@@ -232,6 +232,15 @@ def compute_threatened_guarded_pieces(threatened_pieces, guarded_pieces):
 
     return threatened_guarded_pieces
 
+def compute_threatened_guarded_pieces_new(threatened_pieces, guarded_pieces):
+    threatened_guarded_pieces = list()
+    for threatening_move in threatened_pieces:
+        for guarding_move in guarded_pieces:
+            if threatening_move.to_square == guarding_move.to_square:
+                if threatening_move.to_square not in threatened_guarded_pieces:
+                    threatened_guarded_pieces.append(guarding_move.to_square)
+
+    return threatened_guarded_pieces
 
 def compute_unopposed_threats(threatened_pieces, guarded_pieces):
     unopposed_threats = set()

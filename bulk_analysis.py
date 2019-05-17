@@ -5,7 +5,7 @@ import chess_analysis
 import chess_plot
 
 
-def analyse(engine, pgn):
+def analyse(filename, engine, pgn):
 
     act_game = chess_analysis.read_game(pgn)
 
@@ -156,7 +156,7 @@ def main():
     # Open PGN file
     # filename = "kasparov_karpov_1986"
     # filename = "kramnik_leko_2001"
-    filename = "lcc2017"
+    filename = "lcc2017_mini"
     chess_io.init_folder_structure(filename)
     pgn = chess_io.open_pgn(filename)
 
@@ -172,9 +172,7 @@ def main():
               " - " + act_game.headers["Black"] + "  " + act_game.headers["Result"] +
               " / " + act_game.headers["Date"])
 
-        # analyse(engine, pgn)
-
-
+        analyse(filename, engine, pgn)
 
 
 main()

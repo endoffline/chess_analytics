@@ -18,7 +18,7 @@ def open_pgn(filename):
 def write_dict_to_csv(filename, content):
     create_path('output' + '/' + filename)
     with open('output' + '/' + filename + '/' + filename + '.csv', 'w', newline='') as csv_file:
-        writer = csv.writer(csv_file, delimiter=',')
+        writer = csv.writer(csv_file, delimiter=';')
         writer.writerow(content.keys())
         writer.writerows(zip(*content.values()))
 

@@ -33,31 +33,32 @@ def main():
         "fullmove_number": [],  # stores the move numbers
         "san": [],  # stores a move in Standard Algebraic Notation (SAN)
         "lan": [],  # stores a move in Long Algebraic Notation (LAN)
-        "move_count": [],  # stores the number of possible moves in this turn
         "score": [],  # stores the scores calculated by Stockfish
-        "best_move_score_diff": [],  # stores the difference between the calculated best move and the actual move
-        "best_move_score_diff_category": [],  # stores the category for the calculated difference
+        "move_count": [],  # stores the number of possible moves in this turn
         "best_move": [],  # stores the best move in SAN
         "best_move_score": [],  # stores the best move's score
+        "best_move_score_diff": [],  # stores the difference between the calculated best move and the actual move
+        "best_move_score_diff_category": [],  # stores the category for the calculated difference
         "is_check": [],  # stores if the move checks the opposed king
         "is_capture": [],  # stores is the move actually captures a piece
-        "pawnending": [],  # stores if only kings and pawns are left on the board
-        "rookending": [],  # stores if only kings, rooks and possible pawns are left on the board
+        "is_castling": [],  # stores if the king has been castled
+        "possible_moves_count": [],  # stores the number of possible moves for the next player
+        "is_capture_count": [],  # stores the number of possible captures
         "attackers": [],
         "attackers_count": [],  # stores the number of possible attacks/threats by the opponent
         "threatened_pieces": [],
         "threatened_pieces_count": [],
-        "is_capture_count": [],  # stores the number of possible captures
-        "is_castling": [],  # stores if the king has been castled
-        "next_move_count": [],  # stores the number of possible moves for the next player
         "guards": [],
         "guards_count": [],
         "guarded_pieces": [],
         "guarded_pieces_count": [],
         "threatened_guarded_pieces": [],
         "threatened_guarded_pieces_count": [],
-        "threatened_guarded_pieces_info": [],
-        "unopposed_threats_count": []
+        #"threatened_guarded_pieces_info": [],
+        "unopposed_threats": [],
+        "unopposed_threats_count": [],
+        "pawnending": [],  # stores if only kings and pawns are left on the board
+        "rookending": [],  # stores if only kings, rooks and possible pawns are left on the board
     }
 
     # Get the intial board of the game
@@ -111,15 +112,16 @@ def main():
         counts["guarded_pieces"].append(guarded_pieces)
         counts["guarded_pieces_count"].append(len(guarded_pieces))
 
-        threatened_guarded_pieces = chess_analysis.compute_threatened_guarded_pieces(attack_moves, guard_moves)
+        threatened_guarded_pieces = chess_analysis.compute_threatened_guarded_pieces_new(attack_moves, guard_moves)
         counts["threatened_guarded_pieces"].append(threatened_guarded_pieces)
-        counts["threatened_guarded_pieces_count"].append(len(threatened_guarded_pieces.get('square')))
+        counts["threatened_guarded_pieces_count"].append(len(threatened_guarded_pieces))
         # counts["threatened_guarded_pieces_count"].append(len(threatened_pieces) - len(guarded_pieces))
         unopposed_threats = chess_analysis.compute_unopposed_threats(threatened_pieces, guarded_pieces)
-        counts["unopposed_threats_count"].append(unopposed_threats)
+        counts["unopposed_threats"].append(unopposed_threats)
+        counts["unopposed_threats_count"].append(len(unopposed_threats))
         print("threatened_pieces:", len(threatened_pieces), "guarded_pieces:", len(guarded_pieces), "tg_pieces:", len(threatened_pieces) - len(guarded_pieces), "unopposed:", unopposed_threats)
         move_cnt = len([i for i in board.legal_moves])
-        counts["next_move_count"].append(move_cnt)
+        counts["possible_moves_count"].append(move_cnt)
         # remove move to calculate the best move as well as the difference between the best move and the actual move
         board.pop()
 
@@ -155,9 +157,10 @@ def main():
     SVG(chess.svg.board(board=board, size=400))
 
     chess_plot.plot_graph(act_game, filename, counts)
-
+    print("before csv")
+    print(counts)
     chess_io.write_dict_to_csv(filename, counts)
-
+    print("after csv")
     return 0
 
 
