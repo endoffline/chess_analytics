@@ -73,8 +73,12 @@ def rook_ending(fen):
         return False
 
 
+def compute_move_count(board):
+    return len([i for i in board.legal_moves])
+
+
 # Calculates the score for a move
-def compute_score(engine, board):
+def compute_score(engine, board, time):
     # Start a search.
     # engine.position(board)
     # engine.go(movetime=100)
@@ -82,50 +86,38 @@ def compute_score(engine, board):
     #print(play)
     #print(board.san(play.move))
     #print(board.san(play.ponder))
-    info = engine.analyse(board, chess.engine.Limit(time=0.100))
+    info = engine.analyse(board, chess.engine.Limit(time=time))
     score = 0
     if board.turn == chess.WHITE:
         score = info.get("score").white().score()
     else:
-        score = info["score"].white().score()
+        score = info.get("score").white().score()
     # print("Score: ", score)
     return score
 
 
-def compute_score_alternative(engine, board):
-    play = engine.play(board=board, limit=chess.engine.Limit(time=0.100), info=Info.ALL)
-    #print(play)
-    #print("a best move: ", board.san(play.move))
-
+def compute_score_alternative(engine, board, time):
+    play = engine.play(board=board, limit=chess.engine.Limit(time=time), info=Info.ALL)
 
     return play.info.get('score').white().score(), play.move
 
 
-def compute_best_move_alternative(engine, board, move):
-    #print("board:", board)
-
-
-    #print("movemove: ", board.san(move), move)
+def compute_best_move_score_alternative(engine, board, move, time):
     board.push(move)
-    #print("board:", board)
-    info = engine.analyse(board=board, limit=chess.engine.Limit(time=0.100), info=Info.ALL)
+    info = engine.analyse(board=board, limit=chess.engine.Limit(time=time), info=Info.ALL)
     board.pop()
-    print('alt_best_move: ', board.san(move), ' alt_best_score: ', info.get('score').white().score())
-
-    #print('yolo')
-    #print(info)
     return info.get('score').white().score()
 
 
 # Calculates the scores for all possible moves in the current turn and returns a list
-def compute_best_move(engine, board):
+def compute_best_move(engine, board, time):
     movescores = list()
 
     for mov in board.legal_moves:
         board.push(mov)
         #engine.position(board)
         #engine.go(movetime=100)
-        info = engine.analyse(board, chess.engine.Limit(time=0.100))
+        info = engine.analyse(board, chess.engine.Limit(time=time))
         score = info.get("score").white().score()
         if board.turn == chess.WHITE:
             if score is not None:
@@ -212,27 +204,27 @@ def compute_to_square_pieces(moves):
     return set(i.to_square for i in moves)
 
 
+# def compute_threatened_guarded_pieces(threatened_pieces, guarded_pieces):
+#    threatened_guarded_pieces = dict({
+#        'square': [],
+#        'threatening_move': [],
+#        'guarding_move': [],
+#        'threats_square': [],
+#        'guards_square': []
+#    })
+#    for threatening_move in threatened_pieces:
+#        for guarding_move in guarded_pieces:
+#            if threatening_move.to_square == guarding_move.to_square:
+#                if threatening_move.to_square not in threatened_guarded_pieces.get('square'):
+#                    threatened_guarded_pieces.get('square').append(guarding_move.to_square)
+#                if threatening_move not in threatened_guarded_pieces.get('threatening_move'):
+#                    threatened_guarded_pieces.get('threatening_move').append(threatening_move)
+#                if guarding_move not in threatened_guarded_pieces.get('guarding_move'):
+#                    threatened_guarded_pieces.get('guarding_move').append(guarding_move)
+#    return threatened_guarded_pieces
+
+
 def compute_threatened_guarded_pieces(threatened_pieces, guarded_pieces):
-    threatened_guarded_pieces = dict({
-        'square': [],
-        'threatening_move': [],
-        'guarding_move': [],
-        'threats_square': [],
-        'guards_square': []
-    })
-    for threatening_move in threatened_pieces:
-        for guarding_move in guarded_pieces:
-            if threatening_move.to_square == guarding_move.to_square:
-                if threatening_move.to_square not in threatened_guarded_pieces.get('square'):
-                    threatened_guarded_pieces.get('square').append(guarding_move.to_square)
-                if threatening_move not in threatened_guarded_pieces.get('threatening_move'):
-                    threatened_guarded_pieces.get('threatening_move').append(threatening_move)
-                if guarding_move not in threatened_guarded_pieces.get('guarding_move'):
-                    threatened_guarded_pieces.get('guarding_move').append(guarding_move)
-
-    return threatened_guarded_pieces
-
-def compute_threatened_guarded_pieces_new(threatened_pieces, guarded_pieces):
     threatened_guarded_pieces = list()
     for threatening_move in threatened_pieces:
         for guarding_move in guarded_pieces:
@@ -241,6 +233,7 @@ def compute_threatened_guarded_pieces_new(threatened_pieces, guarded_pieces):
                     threatened_guarded_pieces.append(guarding_move.to_square)
 
     return threatened_guarded_pieces
+
 
 def compute_unopposed_threats(threatened_pieces, guarded_pieces):
     unopposed_threats = set()

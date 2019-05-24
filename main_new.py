@@ -61,6 +61,8 @@ def main():
         "rookending": [],  # stores if only kings, rooks and possible pawns are left on the board
     }
 
+    time = 0.100
+
     # Get the intial board of the game
     board = act_game.board()
     print(board.fen())
@@ -80,13 +82,13 @@ def main():
         print("turn: ", board.turn)
         print("actual move: ", board.san(move), move)
 
-        a_score, a_best_move = chess_analysis.compute_score_alternative(engine, board)
-        a_best_move_score = chess_analysis.compute_best_move_alternative(engine, board, a_best_move)
+        a_score, a_best_move = chess_analysis.compute_score_alternative(engine, board, time)
+        a_best_move_score = chess_analysis.compute_best_move_score_alternative(engine, board, a_best_move, time)
 
         # apply move
         board.push(move)
 
-        score = chess_analysis.compute_score(engine, board)
+        score = chess_analysis.compute_score(engine, board, time)
 
         counts["score"].append(score)
         counts["is_check"].append(board.is_check())
@@ -112,7 +114,7 @@ def main():
         counts["guarded_pieces"].append(guarded_pieces)
         counts["guarded_pieces_count"].append(len(guarded_pieces))
 
-        threatened_guarded_pieces = chess_analysis.compute_threatened_guarded_pieces_new(attack_moves, guard_moves)
+        threatened_guarded_pieces = chess_analysis.compute_threatened_guarded_pieces(attack_moves, guard_moves)
         counts["threatened_guarded_pieces"].append(threatened_guarded_pieces)
         counts["threatened_guarded_pieces_count"].append(len(threatened_guarded_pieces))
         # counts["threatened_guarded_pieces_count"].append(len(threatened_pieces) - len(guarded_pieces))
@@ -125,18 +127,18 @@ def main():
         # remove move to calculate the best move as well as the difference between the best move and the actual move
         board.pop()
 
-        nextmovescores = chess_analysis.compute_best_move(engine, board)
+        next_move_scores = chess_analysis.compute_best_move(engine, board, time)
 
-        if len(nextmovescores) > 1:
+        if len(next_move_scores) > 1:
             # next_scores = [*nextmovescores.keys()]
             # next_scores.sort(reverse=board.turn)
             # print(nextmovescores)
-            nextmovescores.sort(key=lambda scores: scores[0], reverse=board.turn)
+            next_move_scores.sort(key=lambda scores: scores[0], reverse=board.turn)
             # print(nextmovescores)
-            best_move = board.san(nextmovescores[0][1])
+            best_move = board.san(next_move_scores[0][1])
             counts["best_move"].append(best_move)
-            counts["best_move_score"].append(nextmovescores[0][0])
-            best_move_score_diff = abs(nextmovescores[0][0] - score)
+            counts["best_move_score"].append(next_move_scores[0][0])
+            best_move_score_diff = abs(next_move_scores[0][0] - score)
             counts["best_move_score_diff"].append(best_move_score_diff)
             counts["best_move_score_diff_category"].append(
                 chess_analysis.categorize_best_move_score_diff(best_move_score_diff, best_move, actual_move))
@@ -149,7 +151,7 @@ def main():
         board.push(move)
         chess_io.export_board_svg(board, filename, len(counts["san"]))
         print('actual_score: ', score, ' alt_score: ', a_score)
-        print('actual_best_move: ', best_move, ' best_score: ', nextmovescores[0][0])
+        print('actual_best_move: ', best_move, ' best_score: ', next_move_scores[0][0])
         #print('alt_best_move: ', a_best_move, ' alt_best_score: ', a_best_move_score)
 
         print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
