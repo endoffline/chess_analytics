@@ -5,6 +5,7 @@ import plotly.graph_objs as go
 import plotly.io as pio
 import numpy as np
 
+
 def plot_graph(act_game, filename, counts):
     # plotly.tools.set_credentials_file(username='s1710629025', api_key='••••••••••')
     plotly.offline.init_notebook_mode(connected=True)
@@ -16,8 +17,8 @@ def plot_graph(act_game, filename, counts):
     # best = [s for s in counts["bestdiff"]]
     best = counts["best_move_score_diff_category"]
 
-    rook_color = ['blue' if i else 'white' for i in counts["rookending"]]
-    pawn_color = ['green' if i else 'white' for i in counts["pawnending"]]
+    rook_color = ['blue' if i else 'white' for i in counts["rook_ending"]]
+    pawn_color = ['green' if i else 'white' for i in counts["pawn_ending"]]
     capture_color = ['yellow' if i else 'white' for i in counts["is_capture"]]
     capture_no = [i for (i, s) in enumerate(counts["is_capture"]) if s]
 

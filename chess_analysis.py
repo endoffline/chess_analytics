@@ -146,14 +146,14 @@ def categorize_best_move_score_diff(best_move_score_diff, best_move, actual_move
     return category
 
 
-# Determines how many pieces of the current player are being threatend by the opponent
-def compute_attack_moves(board):
+# Determines how many pieces of the current player are being threatened by the opponent
+def compute_attack_moves(board, color):
     pieces = board.piece_map()
 
     attack_moves = list()
     for square, piece in pieces.items():
         attackers = [i for i in board.attackers(not piece.color, square) if
-                     i > 0 and board.piece_at(i).color != board.turn]
+                     i > 0 and board.piece_at(i).color == color]
         attacker_types = [board.piece_at(i).symbol() for i in attackers]
 
         for a in attackers:
@@ -163,19 +163,19 @@ def compute_attack_moves(board):
     return attack_moves
 
 
-def compute_guard_moves(board):
+def compute_guard_moves(board, color):
     c_board = copy.deepcopy(board)
 
     # loop over one colors pieces
     pieces = c_board.piece_map()
     # print("Pieces")
     # print(pieces)
-    bait_piece = chess.Piece(chess.QUEEN, not c_board.turn)
+    bait_piece = chess.Piece(chess.QUEEN, not color)
     count = 0
     guard_moves = list()
     for square, piece in pieces.items():
-        if piece.color == c_board.turn:
-            p = c_board.remove_piece_at(square);
+        if piece.color == color:
+            p = c_board.remove_piece_at(square)
             c_board.set_piece_at(square, bait_piece)
 
             for mov in c_board.legal_moves:
@@ -192,16 +192,69 @@ def compute_guard_moves(board):
     return guard_moves
 
 
+# TODO fix a1 as guard
+def compute_guard_moves_alt(board, color):
+    c_board = copy.deepcopy(board)
+
+    # loop over one colors pieces
+    pieces = c_board.piece_map()
+    # print("Pieces")
+    # print(pieces)
+    bait_piece = chess.Piece(chess.QUEEN, not color)
+    count = 0
+    guard_moves = list()
+    for square, piece in pieces.items():
+
+        if piece.color == color:
+            print(get_square_name(square))
+            p = c_board.remove_piece_at(square)
+            c_board.set_piece_at(square, bait_piece)
+            attackers = [i for i in board.attackers(color, square) if
+                         i > 0]
+            attacker_types = [board.piece_at(i).symbol() for i in attackers]
+            print(get_square_names(attackers))
+            for a in attackers:
+                # attacked_pieces.append([chess.SQUARE_NAMES[a], pieces[a].symbol(), chess.SQUARE_NAMES[square], piece.symbol()])
+                guard_moves.append(chess.Move(a, square))
+
+            c_board.remove_piece_at(square)
+            c_board.set_piece_at(square, p)
+
+            #p = c_board.remove_piece_at(square)
+            #c_board.set_piece_at(square, bait_piece)
+
+            #for mov in c_board.legal_moves:
+            #    if mov.to_square == square and c_board.is_capture(mov):
+                    # guarded_pieces.append([chess.SQUARE_NAMES[mov.from_square], pieces[mov.from_square].symbol(), chess.SQUARE_NAMES[square], piece.symbol()])
+            #        guard_moves.append(mov)
+            #c_board.remove_piece_at(square)
+            #c_board.set_piece_at(square, p)
+
+        # remove_piece_at()
+        # loop over legal_moves
+        # count moves to removed piece position
+
+    return guard_moves
+
+
 def compute_captures(board):
     return [i for i in board.legal_moves if board.is_capture(i)]
 
 
 def compute_from_square_pieces(moves):
-    return set(i.from_square for i in moves)
+    return list(set(i.from_square for i in moves))
 
 
 def compute_to_square_pieces(moves):
-    return set(i.to_square for i in moves)
+    return list(set(i.to_square for i in moves))
+
+
+def get_square_name(square):
+    return chess.SQUARE_NAMES[square]
+
+
+def get_square_names(squares):
+    return [get_square_name(square) for square in squares]
 
 
 # def compute_threatened_guarded_pieces(threatened_pieces, guarded_pieces):
@@ -224,10 +277,10 @@ def compute_to_square_pieces(moves):
 #    return threatened_guarded_pieces
 
 
-def compute_threatened_guarded_pieces(threatened_pieces, guarded_pieces):
+def compute_threatened_guarded_pieces(attack_moves, guard_moves):
     threatened_guarded_pieces = list()
-    for threatening_move in threatened_pieces:
-        for guarding_move in guarded_pieces:
+    for threatening_move in attack_moves:
+        for guarding_move in guard_moves:
             if threatening_move.to_square == guarding_move.to_square:
                 if threatening_move.to_square not in threatened_guarded_pieces:
                     threatened_guarded_pieces.append(guarding_move.to_square)
@@ -241,7 +294,18 @@ def compute_unopposed_threats(threatened_pieces, guarded_pieces):
         if threatened_piece not in guarded_pieces:
             unopposed_threats.add(threatened_piece)
 
-    return unopposed_threats
+    return list(unopposed_threats)
+
+
+def compute_pieces_centipawn(board, squares):
+    centipawns = [100, 300, 300, 500, 900, 0]
+    return [centipawns[board.piece_at(square).piece_type-1] for square in squares]
+
+
+# This method should determine the change in scores between two moves
+# It is therefor possible to determine which player benefits from the move
+def compute_score_shift(prev_score, curr_score):
+    return (curr_score - prev_score) // 50
 
 
 def format_move(move):

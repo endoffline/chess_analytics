@@ -2,6 +2,8 @@ from sqlalchemy import Boolean, Column, Integer, String
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship
 from models.base import Base
+from models.score import Score
+from models.timing import Timing
 
 
 class Move(Base):
@@ -40,6 +42,9 @@ class Move(Base):
 
     game_id = Column(Integer, ForeignKey('game.id'))
     game = relationship("Game", back_populates="moves")
+
+    scores = relationship("Score", uselist=False, back_populates="move")
+    timing = relationship("Timing", uselist=False, back_populates="move")
 
     def __repr__(self):
         return "<Move(" \

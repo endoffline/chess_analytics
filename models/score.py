@@ -1,5 +1,8 @@
 from sqlalchemy import Column, Integer, String
+from sqlalchemy import ForeignKey
+from sqlalchemy.orm import relationship
 from models.base import Base
+from models.timing_score import TimingScore
 
 
 class Score(Base):
@@ -97,6 +100,11 @@ class Score(Base):
     best_move_score_diff_category_b1000 = Column(Integer)
     best_move_score_diff_category_b2000 = Column(Integer)
     best_move_score_diff_category_b5000 = Column(Integer)
+
+    move_id = Column(Integer, ForeignKey('move.id'))
+    move = relationship("Move", back_populates="scores")
+
+    timing_score = relationship("TimingScore", uselist=False, back_populates="score")
 
     def __repr__(self):
         return "<Score(" \
