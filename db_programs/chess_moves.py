@@ -9,7 +9,7 @@ from time import monotonic
 # time = 0.100
 # times = [0.010, 0.020, 0.050, 0.100, 0.200, 0.500, 1.000, 2.000, 5.000]
 times = [0.010, 0.020, 0.050, 0.100, 0.001, 0.001, 0.001, 0.001, 0.001]
-times = [0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001]
+times = [0.001, 0.001, 0.001, 0.100, 0.001, 0.001, 0.001, 0.001, 0.001]
 
 
 def compute_move(engine, board, mv):
@@ -135,19 +135,19 @@ def compute_move(engine, board, mv):
     for time in times:
         print("Time: %d", time)
         start = monotonic()
-        best_move_scores_a = chess_analysis.compute_best_move(engine, board, time)
+        best_move_scores = chess_analysis.compute_best_move(engine, board, time)
 
-        if len(best_move_scores_a) > 1:
-            best_move_scores_a.sort(key=lambda scores: scores[0], reverse=board.turn)
-            best_move_score_a = best_move_scores_a[0][0]
+        if len(best_move_scores) > 1:
+            best_move_scores.sort(key=lambda scores: scores[0], reverse=board.turn)
+            best_move_score_a = best_move_scores[0][0]
             t_best_move_score_a = monotonic() - start
 
             start = monotonic()
-            best_move_a = board.san(best_move_scores_a[0][1])
+            best_move_a = board.san(best_move_scores[0][1])
             t_best_move_a = monotonic() - start
 
             start = monotonic()
-            best_move_score_diff_a = abs(best_move_scores_a[0][0] - score_a)
+            best_move_score_diff_a = abs(best_move_scores[0][0] - score_a)
             t_best_move_score_diff_a = monotonic() - start
 
             start = monotonic()

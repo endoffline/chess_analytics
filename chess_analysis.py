@@ -87,11 +87,8 @@ def compute_score(engine, board, time):
     #print(board.san(play.move))
     #print(board.san(play.ponder))
     info = engine.analyse(board, chess.engine.Limit(time=time))
-    score = 0
-    if board.turn == chess.WHITE:
-        score = info.get("score").white().score()
-    else:
-        score = info.get("score").white().score()
+    score = info.get("score").white().score()
+
     # print("Score: ", score)
     return score
 
@@ -206,13 +203,13 @@ def compute_guard_moves_alt(board, color):
     for square, piece in pieces.items():
 
         if piece.color == color:
-            print(get_square_name(square))
+            #print(get_square_name(square))
             p = c_board.remove_piece_at(square)
             c_board.set_piece_at(square, bait_piece)
             attackers = [i for i in board.attackers(color, square) if
                          i > 0]
             attacker_types = [board.piece_at(i).symbol() for i in attackers]
-            print(get_square_names(attackers))
+            #print(get_square_names(attackers))
             for a in attackers:
                 # attacked_pieces.append([chess.SQUARE_NAMES[a], pieces[a].symbol(), chess.SQUARE_NAMES[square], piece.symbol()])
                 guard_moves.append(chess.Move(a, square))
@@ -302,9 +299,17 @@ def compute_pieces_centipawn(board, squares):
     return [centipawns[board.piece_at(square).piece_type-1] for square in squares]
 
 
+def compute_pieces_centipawn_sum(board, squares):
+    return sum(compute_pieces_centipawn(board, squares))
+
+
 # This method should determine the change in scores between two moves
 # It is therefor possible to determine which player benefits from the move
+# TODO evaluate
 def compute_score_shift(prev_score, curr_score):
+    print(prev_score)
+    if not prev_score:
+        prev_score = 0
     return (curr_score - prev_score) // 50
 
 

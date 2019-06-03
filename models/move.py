@@ -49,8 +49,7 @@ class Move(Base):
     def __repr__(self):
         return "<Move(" \
                "fullmove_number='%s', " \
-               "fullmove_number='%s', " \
                "san='%s', lan='%s', " \
                "score='%s')>" % (
-                self.id, self.fullmove_number, self.san, self.lan, self.score)
+                self.fullmove_number, self.san, self.lan, self.score)
 
