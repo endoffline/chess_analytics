@@ -11,7 +11,7 @@ from datetime import datetime
 
 
 def bulk_analyse(engine, session, act_game):
-
+    time = 0.100
     # Get the intial board of the game
     board = act_game.board()
 
@@ -31,12 +31,17 @@ def bulk_analyse(engine, session, act_game):
     print(db_game)
 
     # Iterate through all moves and play them on a board.
+    prev_score = 0
     for ply_number, mv in enumerate(act_game.mainline_moves(), start=1):
-        for i in range(0, 10):
-            db_mv = chess_moves.compute_move(engine, board, mv, ply_number)
-            db_game.moves.append(db_mv)
-            print(db_mv)
+        print(1)
+        print("prev_score: ", prev_score)
+        db_mv = chess_moves.compute_move_optimized(engine, board, mv, ply_number, time, prev_score)
+        db_game.moves.append(db_mv)
+        prev_score = db_mv.score
+        print(db_mv)
+        print("score_shift: ", db_mv.score_shift, db_mv.score_shift_category)
 
+        print(2)
         # push actual move to the board again
         board.push(mv)
 
@@ -47,14 +52,15 @@ def bulk_analyse(engine, session, act_game):
 def main():
 
     chess_engine = chess_analysis.connect_to_stockfish()
-    db_engine = create_engine('sqlite:///chess.db', echo=True)
+    db_engine = create_engine('sqlite:///chess_optimized.db', echo=True)
     Base.metadata.create_all(db_engine)
     Session = sessionmaker(bind=db_engine)
     session = Session()
     # Open PGN file
     # filename = "kasparov_karpov_1986"
     # filename = "kramnik_leko_2001"
-    filename = "lcc2017_mini"
+    # filename = "lcc2017_mini"
+    filename = "lcc2017"
     chess_io.init_folder_structure(filename)
     pgn = chess_io.open_pgn(filename)
 

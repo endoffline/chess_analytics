@@ -310,7 +310,11 @@ def compute_score_shift(prev_score, curr_score):
     print(prev_score)
     if not prev_score:
         prev_score = 0
-    return (curr_score - prev_score) // 50
+    return abs(curr_score - prev_score)
+
+
+def compute_score_shift_category(diff):
+    return diff / 50
 
 
 def format_move(move):
