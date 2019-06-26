@@ -142,7 +142,7 @@ def categorize_best_move_score_diff(best_move_score_diff, best_move, actual_move
 
     return category
 
-
+# Determines the attacking moves the given color can make
 # Determines how many pieces of the current player are being threatened by the opponent
 def compute_attack_moves(board, color):
     pieces = board.piece_map()
@@ -154,7 +154,6 @@ def compute_attack_moves(board, color):
         attacker_types = [board.piece_at(i).symbol() for i in attackers]
 
         for a in attackers:
-            # attacked_pieces.append([chess.SQUARE_NAMES[a], pieces[a].symbol(), chess.SQUARE_NAMES[square], piece.symbol()])
             attack_moves.append(chess.Move(a, square))
 
     return attack_moves
@@ -238,10 +237,12 @@ def compute_captures(board):
     return [i for i in board.legal_moves if board.is_capture(i)]
 
 
+# Get a list of squares from a moves list using the origin of the move
 def compute_from_square_pieces(moves):
     return list(set(i.from_square for i in moves))
 
 
+# Get a list of squares from a moves list using the destination of the move
 def compute_to_square_pieces(moves):
     return list(set(i.to_square for i in moves))
 

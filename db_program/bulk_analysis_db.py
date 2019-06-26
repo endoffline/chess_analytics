@@ -1,8 +1,6 @@
 import chess
-from IPython.display import SVG
-import chess_io
-import chess_analysis
-import chess_moves
+from lib import chess_analysis, chess_io
+from lib import chess_moves
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from models.base import Base
@@ -32,10 +30,10 @@ def bulk_analyse(engine, session, act_game):
 
     # Iterate through all moves and play them on a board.
     for ply_number, mv in enumerate(act_game.mainline_moves(), start=1):
-        for i in range(0, 10):
-            db_mv = chess_moves.compute_move(engine, board, mv, ply_number)
-            db_game.moves.append(db_mv)
-            print(db_mv)
+
+        db_mv = chess_moves.compute_move(engine, board, mv, ply_number)
+        db_game.moves.append(db_mv)
+        print(db_mv)
 
         # push actual move to the board again
         board.push(mv)

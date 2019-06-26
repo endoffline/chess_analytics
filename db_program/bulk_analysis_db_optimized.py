@@ -1,8 +1,6 @@
 import chess
-from IPython.display import SVG
-import chess_io
-import chess_analysis
-import chess_moves
+from lib import chess_analysis, chess_io
+from lib import chess_moves
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from models.base import Base

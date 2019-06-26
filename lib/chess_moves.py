@@ -1,5 +1,5 @@
 import chess
-import chess_analysis
+from lib import chess_analysis
 from models.move import Move
 from models.score import Score
 from models.timing import Timing
@@ -661,7 +661,7 @@ def compute_move_optimized(engine, board, mv, ply_number, time, prev_score):
 
     start = monotonic()
     best_move_score_diff_category = chess_analysis.categorize_best_move_score_diff(best_move_score_diff,
-                                                                                     best_move, san)
+                                                                                   best_move, san)
     t_best_move_score_diff_category = monotonic() - start
 
     db_timing = Timing(

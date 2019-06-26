@@ -1,7 +1,6 @@
 import chess
 from IPython.display import SVG
-import chess_io
-import chess_analysis
+from lib import chess_analysis, chess_io
 import chess_plot
 
 
