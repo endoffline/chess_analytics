@@ -23,10 +23,10 @@ def write_dict_to_csv(filename, content):
         writer.writerows(zip(*content.values()))
 
 
-def export_board_svg(board, game_name, filename):
+def export_board_svg(board, game_name, filename, mv):
     create_path('output' + '/' + game_name + '/' + 'images')
     file = open('output' + '/' + game_name + '/' + 'images' + '/' + str(filename) + '.svg', 'w')
-    file.write(chess.svg.board(board=board, size=400))
+    file.write(chess.svg.board(board=board, lastmove=mv, size=400))
     file.close()
 
 

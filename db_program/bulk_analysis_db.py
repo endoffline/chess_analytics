@@ -29,10 +29,11 @@ def bulk_analyse(engine, session, act_game):
     print(db_game)
 
     # Iterate through all moves and play them on a board.
+    prev_score = 0
     for ply_number, mv in enumerate(act_game.mainline_moves(), start=1):
-
-        db_mv = chess_moves.compute_move(engine, board, mv, ply_number)
+        db_mv = chess_moves.compute_move(engine, board, mv, ply_number, prev_score)
         db_game.moves.append(db_mv)
+        prev_score = db_mv.score
         print(db_mv)
 
         # push actual move to the board again

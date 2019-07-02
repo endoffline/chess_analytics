@@ -34,6 +34,8 @@ def main():
         "san": [],  # stores a move in Standard Algebraic Notation (SAN)
         "lan": [],  # stores a move in Long Algebraic Notation (LAN)
         "score": [],  # stores the scores calculated by Stockfish
+        "score_shift": [],
+        "score_shift_category": [],
         "move_count": [],  # stores the number of possible moves in this turn
         "best_move": [],  # stores the best move in SAN
         "best_move_score": [],  # stores the best move's score
@@ -68,7 +70,6 @@ def main():
         "threatened_guarded_pieces_count_black": [],
         "unopposed_threats_black": [],
         "unopposed_threats_count_black": [],
-        "score_shift": [],
         "threatened_pieces_centipawn_white": [],
         "guarded_pieces_centipawn_white": [],
         "threatened_guarded_pieces_centipawn_white": [],
@@ -77,6 +78,16 @@ def main():
         "guarded_pieces_centipawn_black": [],
         "threatened_guarded_pieces_centipawn_black": [],
         "unopposed_threats_centipawn_black": [],
+        "attackers_count_all": [],
+        "threatened_pieces_count_all": [],
+        "guards_count_all": [],
+        "guarded_pieces_count_all": [],
+        "threatened_guarded_pieces_count_all": [],
+        "unopposed_threats_count_all": [],
+        "threatened_pieces_centipawn_all": [],
+        "guarded_pieces_centipawn_all": [],
+        "threatened_guarded_pieces_centipawn_all": [],
+        "unopposed_threats_centipawn_all": [],
         "pawn_ending": [],  # stores if only kings and pawns are left on the board
         "rook_ending": [],  # stores if only kings, rooks and possible pawns are left on the board
     }
@@ -86,8 +97,9 @@ def main():
     # Get the intial board of the game
     board = act_game.board()
     print(board.fen())
-    chess_io.export_board_svg(board, filename, len(counts["san"]))
-
+    chess_io.export_board_svg(board, filename, len(counts["san"]), None)
+    prev_score = 0
+    score_shift = 0
     # Iterate through all moves and play them on a board.
     for mv in act_game.mainline_moves():
         # calculate opportunities before applying the move
@@ -108,11 +120,11 @@ def main():
         captures = chess_analysis.compute_captures(board)
         is_capture_count = len(captures)
 
+        # White player
         attack_moves_white = chess_analysis.compute_attack_moves(board, chess.BLACK)
         attackers_white = chess_analysis.compute_from_square_pieces(attack_moves_white)
         attackers_count_white = len(attackers_white)
         threatened_pieces_white = chess_analysis.compute_to_square_pieces(attack_moves_white)
-        # print("threatened_pieces_white centipawns", chess_analysis.get_square_names(threatened_pieces_white), chess_analysis.compute_pieces_centipawn(board, threatened_pieces_white))
         threatened_pieces_count_white = len(threatened_pieces_white)
         guard_moves_white = chess_analysis.compute_guard_moves_alt(board, chess.WHITE)
         guards_white = chess_analysis.compute_from_square_pieces(guard_moves_white)
@@ -124,12 +136,11 @@ def main():
         unopposed_threats_white = chess_analysis.compute_unopposed_threats(threatened_pieces_white, guarded_pieces_white)
         unopposed_threats_count_white = len(unopposed_threats_white)
 
+        # Black player
         attack_moves_black = chess_analysis.compute_attack_moves(board, chess.WHITE)
         attackers_black = chess_analysis.compute_from_square_pieces(attack_moves_black)
         attackers_count_black = len(attackers_black)
         threatened_pieces_black = chess_analysis.compute_to_square_pieces(attack_moves_black)
-        # print("threatened_pieces_black centipawns", chess_analysis.get_square_names(threatened_pieces_black),
-        #      chess_analysis.compute_pieces_centipawn(board, threatened_pieces_black))
         threatened_pieces_count_black = len(threatened_pieces_black)
         guard_moves_black = chess_analysis.compute_guard_moves_alt(board, chess.BLACK)
         guards_black = chess_analysis.compute_from_square_pieces(guard_moves_black)
@@ -150,11 +161,9 @@ def main():
         threatened_guarded_pieces_centipawn_black = chess_analysis.compute_pieces_centipawn_sum(board, threatened_guarded_pieces_black)
         unopposed_threats_centipawn_black = chess_analysis.compute_pieces_centipawn_sum(board, unopposed_threats_black)
 
-        prev_score = 0
         if counts["score"]:
-            prev_score = counts["score"][-1]
-        score_shift = chess_analysis.compute_score_shift(prev_score, score_a)
-
+            score_shift = chess_analysis.compute_score_shift(prev_score, score_a)
+        score_shift_category = chess_analysis.compute_score_shift_category(score_shift)
         pawn_ending = chess_analysis.pawn_ending(board.fen())
         rook_ending = chess_analysis.rook_ending(board.fen())
 
@@ -179,6 +188,8 @@ def main():
             best_move_score_diff = 0
             best_move_score_diff_category = -1
 
+        prev_score = score_a
+
         # push actual move to the board again
         board.push(mv)
 
@@ -187,6 +198,8 @@ def main():
         counts["san"].append(san)
         counts["lan"].append(lan)
         counts["score"].append(score_a)
+        counts["score_shift"].append(score_shift)
+        counts["score_shift_category"].append(score_shift_category)
         counts["move_count"].append(move_count)
         counts["best_move"].append(best_move)
         counts["best_move_score"].append(best_move_score)
@@ -224,8 +237,7 @@ def main():
         counts["unopposed_threats_black"].append(
             ', '.join(str(s) for s in chess_analysis.get_square_names(unopposed_threats_black)))
         counts["unopposed_threats_count_black"].append(unopposed_threats_count_black)
-        counts["pawn_ending"].append(pawn_ending)
-        counts["rook_ending"].append(rook_ending)
+
         counts["threatened_pieces_centipawn_white"].append(threatened_pieces_centipawn_white)
         counts["guarded_pieces_centipawn_white"].append(guarded_pieces_centipawn_white)
         counts["threatened_guarded_pieces_centipawn_white"].append(threatened_guarded_pieces_centipawn_white)
@@ -234,10 +246,20 @@ def main():
         counts["guarded_pieces_centipawn_black"].append(guarded_pieces_centipawn_black)
         counts["threatened_guarded_pieces_centipawn_black"].append(threatened_guarded_pieces_centipawn_black)
         counts["unopposed_threats_centipawn_black"].append(unopposed_threats_centipawn_black)
-        counts["score_shift"].append(score_shift)
+        counts["attackers_count_all"].append(attackers_count_white+attackers_count_black)
+        counts["threatened_pieces_count_all"].append(threatened_pieces_count_white+threatened_pieces_count_black)
+        counts["guards_count_all"].append(guards_count_white+guards_count_black)
+        counts["guarded_pieces_count_all"].append(guarded_pieces_count_white+guarded_pieces_count_black)
+        counts["threatened_guarded_pieces_count_all"].append(threatened_guarded_pieces_count_white+threatened_guarded_pieces_count_black)
+        counts["unopposed_threats_count_all"].append(unopposed_threats_count_white+unopposed_threats_count_black)
+        counts["threatened_pieces_centipawn_all"].append(threatened_pieces_centipawn_white+threatened_pieces_centipawn_black)
+        counts["guarded_pieces_centipawn_all"].append(guarded_pieces_centipawn_white+guarded_pieces_centipawn_black)
+        counts["threatened_guarded_pieces_centipawn_all"].append(threatened_guarded_pieces_centipawn_white+threatened_guarded_pieces_centipawn_black)
+        counts["unopposed_threats_centipawn_all"].append(unopposed_threats_centipawn_white+unopposed_threats_centipawn_black)
+        counts["pawn_ending"].append(pawn_ending)
+        counts["rook_ending"].append(rook_ending)
 
-
-        chess_io.export_board_svg(board, filename, len(counts["san"]))
+        chess_io.export_board_svg(board, filename, len(counts["san"]), mv)
         print('actual_score: ', score_a, ' alt_score: ', score_b)
         print('actual_best_move: ', best_move, ' best_score: ', best_move_scores[0][0])
         #print('alt_best_move: ', a_best_move, ' alt_best_score: ', a_best_move_score)

@@ -13,6 +13,8 @@ class Timing(Base):
     san = Column(Float)
     lan = Column(Float)
     score = Column(Float)
+    score_shift = Column(Float)
+    score_shift_category = Column(Float)
     move_count = Column(Float)
     best_move = Column(Float)
     best_move_score = Column(Float)
@@ -48,6 +50,7 @@ class Timing(Base):
     threatened_guarded_pieces_count_black = Column(Float)
     unopposed_threats_black = Column(Float)
     unopposed_threats_count_black = Column(Float)
+    threatened_pieces_centipawn_white = Column(Float)
     pawn_ending = Column(Float)
     rook_ending = Column(Float)
 

@@ -87,8 +87,10 @@ def compute_score(engine, board, time):
     #print(board.san(play.move))
     #print(board.san(play.ponder))
     info = engine.analyse(board, chess.engine.Limit(time=time))
-    score = info.get("score").white().score()
-
+    if info.get("score"):
+        score = info.get("score").white().score()
+    else:
+        score = 0
     # print("Score: ", score)
     return score
 
