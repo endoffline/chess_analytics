@@ -106,21 +106,21 @@ def compute_best_move_score_alternative(engine, board, move, time):
     return info.get('score').white().score()
 
 
-# Calculates the scores for all possible moves in the current turn and returns a list
+# Calculates the scores for all possible moves in the current turn
+# and returns a list containing the scores and moves as tuple
 def compute_best_move(engine, board, time):
     movescores = list()
 
     for mov in board.legal_moves:
         board.push(mov)
-        #engine.position(board)
-        #engine.go(movetime=100)
+        # engine.position(board)
+        # engine.go(movetime=100)
         info = engine.analyse(board, chess.engine.Limit(time=time))
         score = info.get("score").white().score()
-        if board.turn == chess.WHITE:
-            if score is not None:
+        if score is not None:
+            if board.turn == chess.WHITE:
                 movescores.append(tuple((score, mov)))
-        elif board.turn == chess.BLACK:
-            if score is not None:
+            elif board.turn == chess.BLACK:
                 movescores.append(tuple((score, mov)))
         board.pop()
 
