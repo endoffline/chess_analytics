@@ -53,6 +53,7 @@ class Timing(Base):
     threatened_pieces_centipawn_white = Column(Float)
     pawn_ending = Column(Float)
     rook_ending = Column(Float)
+    time = Column(Float)
 
     move_id = Column(Integer, ForeignKey('move.id'))
     move = relationship("Move", back_populates="timing")

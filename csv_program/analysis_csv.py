@@ -193,6 +193,7 @@ def main():
         # push actual move to the board again
         board.push(mv)
 
+        # append parameters to the arrays
         counts["fullmove_number"].append(fullmove_number)
         counts["turn"].append(turn)
         counts["san"].append(san)

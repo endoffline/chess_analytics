@@ -9,10 +9,12 @@ from time import monotonic
 # time = 0.100
 # times = [0.010, 0.020, 0.050, 0.100, 0.200, 0.500, 1.000, 2.000, 5.000]
 times = [0.010, 0.020, 0.050, 0.100, 0.001, 0.001, 0.001, 0.001, 0.001]
-times = [0.001, 0.001, 0.001, 0.100, 0.001, 0.001, 0.001, 0.001, 0.001]
+times = [0.010, 0.020, 0.050, 0.100, 0.200, 0.500, 1.000, 2.000, 0.001]
+depths = [17, 20]
 
 
 def compute_move(engine, board, mv, ply_number, prev_score):
+    move_start_time = monotonic()
     scores_a, best_moves_a, best_move_scores_a, best_move_score_diffs_a, best_move_score_diff_categories_a = [], [], [], [], []
     scores_b, best_moves_b, best_move_scores_b, best_move_score_diffs_b, best_move_score_diff_categories_b = [], [], [], [], []
     t_scores_a, t_best_moves_a, t_best_move_scores_a, t_best_move_score_diffs_a, t_best_move_score_diff_categories_a = [], [], [], [], []
@@ -52,6 +54,13 @@ def compute_move(engine, board, mv, ply_number, prev_score):
     for time in times:
         start = monotonic()
         score_a = chess_analysis.compute_score(engine, board, time)
+        t_score_a = monotonic() - start
+        scores_a.append(score_a)
+        t_scores_a.append(t_score_a)
+
+    for depth in depths:
+        start = monotonic()
+        score_a = chess_analysis.compute_score_by_depth(engine, board, depth)
         t_score_a = monotonic() - start
         scores_a.append(score_a)
         t_scores_a.append(t_score_a)
@@ -210,7 +219,7 @@ def compute_move(engine, board, mv, ply_number, prev_score):
     board.pop()
 
     for time in times:
-        print("Time: %d", time)
+        print("Time: ", time)
         start = monotonic()
         best_move_scores = chess_analysis.compute_best_move(engine, board, time)
 
@@ -280,6 +289,79 @@ def compute_move(engine, board, mv, ply_number, prev_score):
         t_best_move_score_diffs_b.append(t_best_move_score_diff_b)
         t_best_move_score_diff_categories_b.append(t_best_move_score_diff_category_b)
 
+    for depth in depths:
+        print("Depth: ", depth)
+        start = monotonic()
+        best_move_scores = chess_analysis.compute_best_move_by_depth(engine, board, depth)
+
+        if len(best_move_scores) > 1:
+            best_move_scores.sort(key=lambda scores: scores[0], reverse=board.turn)
+            best_move_score_a = best_move_scores[0][0]
+            t_best_move_score_a = monotonic() - start
+
+            start = monotonic()
+            best_move_a = board.san(best_move_scores[0][1])
+            t_best_move_a = monotonic() - start
+
+            start = monotonic()
+            best_move_score_diff_a = abs(best_move_scores[0][0] - score_a)
+            t_best_move_score_diff_a = monotonic() - start
+
+            start = monotonic()
+            best_move_score_diff_category_a = chess_analysis.categorize_best_move_score_diff(best_move_score_diff_a,
+                                                                                             best_move_a, san)
+            t_best_move_score_diff_category_a = monotonic() - start
+        else:
+            best_move_a = "-"
+            t_best_move_a = monotonic() - start
+            best_move_score_a = 0
+            best_move_score_diff_a = 0
+            best_move_score_diff_category_a = -1
+
+        best_moves_a.append(best_move_a)
+        best_move_scores_a.append(best_move_score_a)
+        best_move_score_diffs_a.append(best_move_score_diff_a)
+        best_move_score_diff_categories_a.append(best_move_score_diff_category_a)
+        t_best_moves_a.append(t_best_move_a)
+        t_best_move_scores_a.append(t_best_move_score_a)
+        t_best_move_score_diffs_a.append(t_best_move_score_diff_a)
+        t_best_move_score_diff_categories_a.append(t_best_move_score_diff_category_a)
+
+        start = monotonic()
+        score_b, best_move_b = chess_analysis.compute_score_alternative_by_depth(engine, board, depth)
+        t_score_b = monotonic() - start
+        t_best_move_b = t_score_b
+
+        start = monotonic()
+        best_move_score_b = chess_analysis.compute_best_move_score_alternative_by_depth(engine, board, best_move_b, depth)
+        t_best_move_score_b = monotonic() - start
+
+        start = monotonic()
+        best_move_score_diff_b = abs(best_move_score_b - score_b)
+        t_best_move_score_diff_b = monotonic() - start
+
+        start = monotonic()
+        best_move_b = board.san(best_move_b)
+        t_best_move_b = t_best_move_b + monotonic() - start
+
+        start = monotonic()
+        best_move_score_diff_category_b = chess_analysis.categorize_best_move_score_diff(best_move_score_diff_b,
+                                                                                         best_move_b, san)
+        t_best_move_score_diff_category_b = monotonic() - start
+
+        scores_b.append(score_b)
+        best_moves_b.append(best_move_b)
+        best_move_scores_b.append(best_move_score_b)
+        best_move_score_diffs_b.append(best_move_score_diff_b)
+        best_move_score_diff_categories_b.append(best_move_score_diff_category_b)
+        t_scores_b.append(t_score_b)
+        t_best_moves_b.append(t_best_move_b)
+        t_best_move_scores_b.append(t_best_move_score_b)
+        t_best_move_score_diffs_b.append(t_best_move_score_diff_b)
+        t_best_move_score_diff_categories_b.append(t_best_move_score_diff_category_b)
+
+    move_runtime = monotonic() - move_start_time
+    print("Move runtime: ", move_runtime)
     db_timing_score = TimingScore(
         score_a0010=t_scores_a[0],
         score_a0020=t_scores_a[1],
@@ -290,6 +372,8 @@ def compute_move(engine, board, mv, ply_number, prev_score):
         score_a1000=t_scores_a[6],
         score_a2000=t_scores_a[7],
         score_a5000=t_scores_a[8],
+        score_a10=t_scores_a[9],
+        score_a20=t_scores_a[10],
         best_move_a0010=t_best_moves_a[0],
         best_move_a0020=t_best_moves_a[1],
         best_move_a0050=t_best_moves_a[2],
@@ -299,6 +383,8 @@ def compute_move(engine, board, mv, ply_number, prev_score):
         best_move_a1000=t_best_moves_a[6],
         best_move_a2000=t_best_moves_a[7],
         best_move_a5000=t_best_moves_a[8],
+        best_move_a10=t_best_moves_a[9],
+        best_move_a20=t_best_moves_a[10],
         best_move_score_a0010=t_best_move_scores_a[0],
         best_move_score_a0020=t_best_move_scores_a[1],
         best_move_score_a0050=t_best_move_scores_a[2],
@@ -308,6 +394,8 @@ def compute_move(engine, board, mv, ply_number, prev_score):
         best_move_score_a1000=t_best_move_scores_a[6],
         best_move_score_a2000=t_best_move_scores_a[7],
         best_move_score_a5000=t_best_move_scores_a[8],
+        best_move_score_a10=t_best_move_scores_a[9],
+        best_move_score_a20=t_best_move_scores_a[10],
         best_move_score_diff_a0010=t_best_move_score_diffs_a[0],
         best_move_score_diff_a0020=t_best_move_score_diffs_a[1],
         best_move_score_diff_a0050=t_best_move_score_diffs_a[2],
@@ -317,6 +405,8 @@ def compute_move(engine, board, mv, ply_number, prev_score):
         best_move_score_diff_a1000=t_best_move_score_diffs_a[6],
         best_move_score_diff_a2000=t_best_move_score_diffs_a[7],
         best_move_score_diff_a5000=t_best_move_score_diffs_a[8],
+        best_move_score_diff_a10=t_best_move_score_diffs_a[9],
+        best_move_score_diff_a20=t_best_move_score_diffs_a[10],
         best_move_score_diff_category_a0010=t_best_move_score_diff_categories_a[0],
         best_move_score_diff_category_a0020=t_best_move_score_diff_categories_a[1],
         best_move_score_diff_category_a0050=t_best_move_score_diff_categories_a[2],
@@ -326,6 +416,8 @@ def compute_move(engine, board, mv, ply_number, prev_score):
         best_move_score_diff_category_a1000=t_best_move_score_diff_categories_a[6],
         best_move_score_diff_category_a2000=t_best_move_score_diff_categories_a[7],
         best_move_score_diff_category_a5000=t_best_move_score_diff_categories_a[8],
+        best_move_score_diff_category_a10=t_best_move_score_diff_categories_a[9],
+        best_move_score_diff_category_a20=t_best_move_score_diff_categories_a[10],
 
         score_b0010=t_scores_b[0],
         score_b0020=t_scores_b[1],
@@ -336,6 +428,8 @@ def compute_move(engine, board, mv, ply_number, prev_score):
         score_b1000=t_scores_b[6],
         score_b2000=t_scores_b[7],
         score_b5000=t_scores_b[8],
+        score_b10=t_scores_b[9],
+        score_b20=t_scores_b[10],
         best_move_b0010=t_best_moves_b[0],
         best_move_b0020=t_best_moves_b[1],
         best_move_b0050=t_best_moves_b[2],
@@ -345,6 +439,8 @@ def compute_move(engine, board, mv, ply_number, prev_score):
         best_move_b1000=t_best_moves_b[6],
         best_move_b2000=t_best_moves_b[7],
         best_move_b5000=t_best_moves_b[8],
+        best_move_b10=t_best_moves_b[9],
+        best_move_b20=t_best_moves_b[10],
         best_move_score_b0010=t_best_move_scores_b[0],
         best_move_score_b0020=t_best_move_scores_b[1],
         best_move_score_b0050=t_best_move_scores_b[2],
@@ -354,6 +450,8 @@ def compute_move(engine, board, mv, ply_number, prev_score):
         best_move_score_b1000=t_best_move_scores_b[6],
         best_move_score_b2000=t_best_move_scores_b[7],
         best_move_score_b5000=t_best_move_scores_b[8],
+        best_move_score_b10=t_best_move_scores_b[9],
+        best_move_score_b20=t_best_move_scores_b[10],
         best_move_score_diff_b0010=t_best_move_score_diffs_b[0],
         best_move_score_diff_b0020=t_best_move_score_diffs_b[1],
         best_move_score_diff_b0050=t_best_move_score_diffs_b[2],
@@ -363,6 +461,8 @@ def compute_move(engine, board, mv, ply_number, prev_score):
         best_move_score_diff_b1000=t_best_move_score_diffs_b[6],
         best_move_score_diff_b2000=t_best_move_score_diffs_b[7],
         best_move_score_diff_b5000=t_best_move_score_diffs_b[8],
+        best_move_score_diff_b10=t_best_move_score_diffs_b[9],
+        best_move_score_diff_b20=t_best_move_score_diffs_b[10],
         best_move_score_diff_category_b0010=t_best_move_score_diff_categories_b[0],
         best_move_score_diff_category_b0020=t_best_move_score_diff_categories_b[1],
         best_move_score_diff_category_b0050=t_best_move_score_diff_categories_b[2],
@@ -372,6 +472,8 @@ def compute_move(engine, board, mv, ply_number, prev_score):
         best_move_score_diff_category_b1000=t_best_move_score_diff_categories_b[6],
         best_move_score_diff_category_b2000=t_best_move_score_diff_categories_b[7],
         best_move_score_diff_category_b5000=t_best_move_score_diff_categories_b[8],
+        best_move_score_diff_category_b10=t_best_move_score_diff_categories_b[9],
+        best_move_score_diff_category_b20=t_best_move_score_diff_categories_b[10],
     )
 
     db_score = Score(
@@ -384,6 +486,8 @@ def compute_move(engine, board, mv, ply_number, prev_score):
         score_a1000=scores_a[6],
         score_a2000=scores_a[7],
         score_a5000=scores_a[8],
+        score_a10=scores_a[9],
+        score_a20=scores_a[10],
         best_move_a0010=best_moves_a[0],
         best_move_a0020=best_moves_a[1],
         best_move_a0050=best_moves_a[2],
@@ -393,6 +497,8 @@ def compute_move(engine, board, mv, ply_number, prev_score):
         best_move_a1000=best_moves_a[6],
         best_move_a2000=best_moves_a[7],
         best_move_a5000=best_moves_a[8],
+        best_move_a10=best_moves_a[9],
+        best_move_a20=best_moves_a[10],
         best_move_score_a0010=best_move_scores_a[0],
         best_move_score_a0020=best_move_scores_a[1],
         best_move_score_a0050=best_move_scores_a[2],
@@ -402,6 +508,8 @@ def compute_move(engine, board, mv, ply_number, prev_score):
         best_move_score_a1000=best_move_scores_a[6],
         best_move_score_a2000=best_move_scores_a[7],
         best_move_score_a5000=best_move_scores_a[8],
+        best_move_score_a10=best_move_scores_a[9],
+        best_move_score_a20=best_move_scores_a[10],
         best_move_score_diff_a0010=best_move_score_diffs_a[0],
         best_move_score_diff_a0020=best_move_score_diffs_a[1],
         best_move_score_diff_a0050=best_move_score_diffs_a[2],
@@ -411,6 +519,8 @@ def compute_move(engine, board, mv, ply_number, prev_score):
         best_move_score_diff_a1000=best_move_score_diffs_a[6],
         best_move_score_diff_a2000=best_move_score_diffs_a[7],
         best_move_score_diff_a5000=best_move_score_diffs_a[8],
+        best_move_score_diff_a10=best_move_score_diffs_a[9],
+        best_move_score_diff_a20=best_move_score_diffs_a[10],
         best_move_score_diff_category_a0010=best_move_score_diff_categories_a[0],
         best_move_score_diff_category_a0020=best_move_score_diff_categories_a[1],
         best_move_score_diff_category_a0050=best_move_score_diff_categories_a[2],
@@ -420,6 +530,8 @@ def compute_move(engine, board, mv, ply_number, prev_score):
         best_move_score_diff_category_a1000=best_move_score_diff_categories_a[6],
         best_move_score_diff_category_a2000=best_move_score_diff_categories_a[7],
         best_move_score_diff_category_a5000=best_move_score_diff_categories_a[8],
+        best_move_score_diff_category_a10=best_move_score_diff_categories_a[9],
+        best_move_score_diff_category_a20=best_move_score_diff_categories_a[10],
 
         score_b0010=scores_b[0],
         score_b0020=scores_b[1],
@@ -430,6 +542,8 @@ def compute_move(engine, board, mv, ply_number, prev_score):
         score_b1000=scores_b[6],
         score_b2000=scores_b[7],
         score_b5000=scores_b[8],
+        score_b10=scores_b[9],
+        score_b20=scores_b[10],
         best_move_b0010=best_moves_b[0],
         best_move_b0020=best_moves_b[1],
         best_move_b0050=best_moves_b[2],
@@ -439,6 +553,8 @@ def compute_move(engine, board, mv, ply_number, prev_score):
         best_move_b1000=best_moves_b[6],
         best_move_b2000=best_moves_b[7],
         best_move_b5000=best_moves_b[8],
+        best_move_b10=best_moves_b[9],
+        best_move_b20=best_moves_b[10],
         best_move_score_b0010=best_move_scores_b[0],
         best_move_score_b0020=best_move_scores_b[1],
         best_move_score_b0050=best_move_scores_b[2],
@@ -448,6 +564,8 @@ def compute_move(engine, board, mv, ply_number, prev_score):
         best_move_score_b1000=best_move_scores_b[6],
         best_move_score_b2000=best_move_scores_b[7],
         best_move_score_b5000=best_move_scores_b[8],
+        best_move_score_b10=best_move_scores_b[9],
+        best_move_score_b20=best_move_scores_b[10],
         best_move_score_diff_b0010=best_move_score_diffs_b[0],
         best_move_score_diff_b0020=best_move_score_diffs_b[1],
         best_move_score_diff_b0050=best_move_score_diffs_b[2],
@@ -457,6 +575,8 @@ def compute_move(engine, board, mv, ply_number, prev_score):
         best_move_score_diff_b1000=best_move_score_diffs_b[6],
         best_move_score_diff_b2000=best_move_score_diffs_b[7],
         best_move_score_diff_b5000=best_move_score_diffs_b[8],
+        best_move_score_diff_b10=best_move_score_diffs_b[9],
+        best_move_score_diff_b20=best_move_score_diffs_b[10],
         best_move_score_diff_category_b0010=best_move_score_diff_categories_b[0],
         best_move_score_diff_category_b0020=best_move_score_diff_categories_b[1],
         best_move_score_diff_category_b0050=best_move_score_diff_categories_b[2],
@@ -466,6 +586,8 @@ def compute_move(engine, board, mv, ply_number, prev_score):
         best_move_score_diff_category_b1000=best_move_score_diff_categories_b[6],
         best_move_score_diff_category_b2000=best_move_score_diff_categories_b[7],
         best_move_score_diff_category_b5000=best_move_score_diff_categories_b[8],
+        best_move_score_diff_category_b10=best_move_score_diff_categories_b[9],
+        best_move_score_diff_category_b20=best_move_score_diff_categories_b[10],
         timing_score=db_timing_score
     )
 
@@ -515,6 +637,7 @@ def compute_move(engine, board, mv, ply_number, prev_score):
         threatened_pieces_centipawn_white=t_threatened_pieces_centipawn_white,
         pawn_ending=t_pawn_ending,
         rook_ending=t_rook_ending,
+        time=move_runtime
     )
 
     db_mv = Move(

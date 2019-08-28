@@ -5,10 +5,12 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from models.base import Base
 from models.game import Game
-from datetime import datetime
+from datetime import datetime, date
+from time import monotonic
 
 
 def bulk_analyse(engine, session, act_game):
+    start_time = monotonic()
 
     # Get the intial board of the game
     board = act_game.board()
@@ -29,23 +31,27 @@ def bulk_analyse(engine, session, act_game):
     print(db_game)
 
     # Iterate through all moves and play them on a board.
+    prev_score = 0
     for ply_number, mv in enumerate(act_game.mainline_moves(), start=1):
         for i in range(0, 10):
-            db_mv = chess_moves.compute_move(engine, board, mv, ply_number)
+            db_mv = chess_moves.compute_move(engine, board, mv, ply_number, prev_score)
             db_game.moves.append(db_mv)
             print(db_mv)
-
+        prev_score = db_mv.score
         # push actual move to the board again
         board.push(mv)
 
     session.add(db_game)
     session.commit()
 
+    runtime = monotonic() - start_time
+    print("total runtime:", runtime)
+
 
 def main():
 
     chess_engine = chess_analysis.connect_to_stockfish()
-    db_engine = create_engine('sqlite:///chess.db', echo=True)
+    db_engine = create_engine('sqlite:///repeated_bulk_analysis_' + date.today().strftime("%Y-%m-%d") +'.db', echo=True)
     Base.metadata.create_all(db_engine)
     Session = sessionmaker(bind=db_engine)
     session = Session()
@@ -53,6 +59,7 @@ def main():
     # filename = "kasparov_karpov_1986"
     # filename = "kramnik_leko_2001"
     filename = "lcc2017_mini"
+    #filename = "lcc2017"
     chess_io.init_folder_structure(filename)
     pgn = chess_io.open_pgn(filename)
 

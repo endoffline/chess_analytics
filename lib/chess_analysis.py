@@ -95,8 +95,32 @@ def compute_score(engine, board, time):
     return score
 
 
+# Calculates the score for a move
+def compute_score_by_depth(engine, board, depth):
+    # Start a search.
+    # engine.position(board)
+    # engine.go(movetime=100)
+    #play = engine.play(board=board, limit=chess.engine.Limit(time=0.100), info=Info.ALL)
+    #print(play)
+    #print(board.san(play.move))
+    #print(board.san(play.ponder))
+    info = engine.analyse(board, chess.engine.Limit(depth=depth))
+    if info.get("score"):
+        score = info.get("score").white().score()
+    else:
+        score = 0
+    # print("Score: ", score)
+    return score
+
+
 def compute_score_alternative(engine, board, time):
     play = engine.play(board=board, limit=chess.engine.Limit(time=time), info=Info.ALL)
+
+    return play.info.get('score').white().score(), play.move
+
+
+def compute_score_alternative_by_depth(engine, board, depth):
+    play = engine.play(board=board, limit=chess.engine.Limit(depth=depth), info=Info.ALL)
 
     return play.info.get('score').white().score(), play.move
 
@@ -104,6 +128,13 @@ def compute_score_alternative(engine, board, time):
 def compute_best_move_score_alternative(engine, board, move, time):
     board.push(move)
     info = engine.analyse(board=board, limit=chess.engine.Limit(time=time), info=Info.ALL)
+    board.pop()
+    return info.get('score').white().score()
+
+
+def compute_best_move_score_alternative_by_depth(engine, board, move, depth):
+    board.push(move)
+    info = engine.analyse(board=board, limit=chess.engine.Limit(depth=depth), info=Info.ALL)
     board.pop()
     return info.get('score').white().score()
 
@@ -129,6 +160,27 @@ def compute_best_move(engine, board, time):
     return movescores
 
 
+# Calculates the scores for all possible moves in the current turn
+# and returns a list containing the scores and moves as tuple
+def compute_best_move_by_depth(engine, board, depth):
+    movescores = list()
+
+    for mov in board.legal_moves:
+        board.push(mov)
+        # engine.position(board)
+        # engine.go(movetime=100)
+        info = engine.analyse(board, chess.engine.Limit(depth=depth))
+        score = info.get("score").white().score()
+        if score is not None:
+            if board.turn == chess.WHITE:
+                movescores.append(tuple((score, mov)))
+            elif board.turn == chess.BLACK:
+                movescores.append(tuple((score, mov)))
+        board.pop()
+
+    return movescores
+
+
 # Categorizes a move being a blunder(4), mistake(3), inaccuracy(2), neutral move(1) or good move(0)
 def categorize_best_move_score_diff(best_move_score_diff, best_move, actual_move):
     category = 1
@@ -143,6 +195,7 @@ def categorize_best_move_score_diff(best_move_score_diff, best_move, actual_move
         category = 0
 
     return category
+
 
 # Determines the attacking moves the given color can make
 # Determines how many pieces of the current player are being threatened by the opponent
