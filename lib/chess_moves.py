@@ -8,15 +8,15 @@ from time import monotonic
 
 # time = 0.100
 # times = [0.010, 0.020, 0.050, 0.100, 0.200, 0.500, 1.000, 2.000, 5.000]
-times = [0.010, 0.020, 0.050, 0.100, 0.001, 0.001, 0.001, 0.001, 0.001]
-times = [0.010, 0.020, 0.050, 0.100, 0.200, 0.500, 1.000, 2.000, 0.001]
-depths = [17, 20]
+# times = [0.010, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001]
+times = [0.010, 0.020, 0.050, 0.100, 0.200, 0.500, 1.000, 0.001, 0.001]
+depths = [15, 20]
 
 
-def compute_move(engine, board, mv, ply_number, prev_score):
+def compute_move(engine, board, mv, ply_number, prev_score, best_moves_b):
     move_start_time = monotonic()
     scores_a, best_moves_a, best_move_scores_a, best_move_score_diffs_a, best_move_score_diff_categories_a = [], [], [], [], []
-    scores_b, best_moves_b, best_move_scores_b, best_move_score_diffs_b, best_move_score_diff_categories_b = [], [], [], [], []
+    scores_b, next_best_moves_b, best_move_scores_b, best_move_score_diffs_b, best_move_score_diff_categories_b = [], [], [], [], []
     t_scores_a, t_best_moves_a, t_best_move_scores_a, t_best_move_score_diffs_a, t_best_move_score_diff_categories_a = [], [], [], [], []
     t_scores_b, t_best_moves_b, t_best_move_scores_b, t_best_move_score_diffs_b, t_best_move_score_diff_categories_b = [], [], [], [], []
 
@@ -218,7 +218,9 @@ def compute_move(engine, board, mv, ply_number, prev_score):
 
     board.pop()
 
-    for time in times:
+    is_first_turn = len(best_moves_b) == 0
+
+    for i, time in enumerate(times):
         print("Time: ", time)
         start = monotonic()
         best_move_scores = chess_analysis.compute_best_move(engine, board, time)
@@ -256,8 +258,18 @@ def compute_move(engine, board, mv, ply_number, prev_score):
         t_best_move_score_diffs_a.append(t_best_move_score_diff_a)
         t_best_move_score_diff_categories_a.append(t_best_move_score_diff_category_a)
 
+        if is_first_turn:
+            start = monotonic()
+            not_needed, best_move_b = chess_analysis.compute_score_alternative(engine, board, time)
+            t_best_move_b = monotonic() - start
+            best_moves_b.append(best_move_b)
+        else:
+            best_move_b = best_moves_b[i]
+
         start = monotonic()
-        score_b, best_move_b = chess_analysis.compute_score_alternative(engine, board, time)
+        board.push(mv)
+        score_b, next_best_move_b = chess_analysis.compute_score_alternative(engine, board, time)
+        board.pop()
         t_score_b = monotonic() - start
         t_best_move_b = t_score_b
 
@@ -279,7 +291,7 @@ def compute_move(engine, board, mv, ply_number, prev_score):
         t_best_move_score_diff_category_b = monotonic() - start
 
         scores_b.append(score_b)
-        best_moves_b.append(best_move_b)
+        next_best_moves_b.append(next_best_move_b)
         best_move_scores_b.append(best_move_score_b)
         best_move_score_diffs_b.append(best_move_score_diff_b)
         best_move_score_diff_categories_b.append(best_move_score_diff_category_b)
@@ -289,7 +301,7 @@ def compute_move(engine, board, mv, ply_number, prev_score):
         t_best_move_score_diffs_b.append(t_best_move_score_diff_b)
         t_best_move_score_diff_categories_b.append(t_best_move_score_diff_category_b)
 
-    for depth in depths:
+    for i, depth in enumerate(depths):
         print("Depth: ", depth)
         start = monotonic()
         best_move_scores = chess_analysis.compute_best_move_by_depth(engine, board, depth)
@@ -327,8 +339,18 @@ def compute_move(engine, board, mv, ply_number, prev_score):
         t_best_move_score_diffs_a.append(t_best_move_score_diff_a)
         t_best_move_score_diff_categories_a.append(t_best_move_score_diff_category_a)
 
+        if is_first_turn:
+            start = monotonic()
+            not_needed, best_move_b = chess_analysis.compute_score_alternative(engine, board, depth)
+            t_best_move_b = monotonic() - start
+            best_moves_b.append(best_move_b)
+        else:
+            best_move_b = best_moves_b[len(times) + i]
+
         start = monotonic()
-        score_b, best_move_b = chess_analysis.compute_score_alternative_by_depth(engine, board, depth)
+        board.push(mv)
+        score_b, next_best_move_b = chess_analysis.compute_score_alternative_by_depth(engine, board, depth)
+        board.pop()
         t_score_b = monotonic() - start
         t_best_move_b = t_score_b
 
@@ -350,7 +372,7 @@ def compute_move(engine, board, mv, ply_number, prev_score):
         t_best_move_score_diff_category_b = monotonic() - start
 
         scores_b.append(score_b)
-        best_moves_b.append(best_move_b)
+        next_best_moves_b.append(next_best_move_b)
         best_move_scores_b.append(best_move_score_b)
         best_move_score_diffs_b.append(best_move_score_diff_b)
         best_move_score_diff_categories_b.append(best_move_score_diff_category_b)
@@ -359,6 +381,8 @@ def compute_move(engine, board, mv, ply_number, prev_score):
         t_best_move_scores_b.append(t_best_move_score_b)
         t_best_move_score_diffs_b.append(t_best_move_score_diff_b)
         t_best_move_score_diff_categories_b.append(t_best_move_score_diff_category_b)
+
+    best_moves_b = [board.san(i) for i in best_moves_b]
 
     move_runtime = monotonic() - move_start_time
     print("Move runtime: ", move_runtime)
@@ -708,7 +732,7 @@ def compute_move(engine, board, mv, ply_number, prev_score):
         timing=db_timing
     )
 
-    return db_mv
+    return db_mv, next_best_moves_b
 
 
 def compute_move_optimized(engine, board, mv, ply_number, time, prev_score):

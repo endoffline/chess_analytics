@@ -9,8 +9,8 @@ def main():
     engine = chess_analysis.connect_to_stockfish()
 
     # Open PGN file
-    # filename = "kasparov_karpov_1986"
-    filename = "kramnik_leko_2001"
+    filename = "kasparov_karpov_1986"
+    # filename = "kramnik_leko_2001"
     # filename = "lcc2017"
     chess_io.init_folder_structure(filename)
     pgn = chess_io.open_pgn(filename)
@@ -88,6 +88,7 @@ def main():
         "guarded_pieces_centipawn_all": [],
         "threatened_guarded_pieces_centipawn_all": [],
         "unopposed_threats_centipawn_all": [],
+        "attack_defense_relation": [],
         "pawn_ending": [],  # stores if only kings and pawns are left on the board
         "rook_ending": [],  # stores if only kings, rooks and possible pawns are left on the board
     }
@@ -124,12 +125,12 @@ def main():
         attack_moves_white = chess_analysis.compute_attack_moves(board, chess.BLACK)
         attackers_white = chess_analysis.compute_from_square_pieces(attack_moves_white)
         attackers_count_white = len(attackers_white)
-        threatened_pieces_white = chess_analysis.compute_to_square_pieces(attack_moves_white)
+        threatened_pieces_white = list(set(chess_analysis.compute_to_square_pieces(attack_moves_white)))
         threatened_pieces_count_white = len(threatened_pieces_white)
         guard_moves_white = chess_analysis.compute_guard_moves_alt(board, chess.WHITE)
         guards_white = chess_analysis.compute_from_square_pieces(guard_moves_white)
         guards_count_white = len(guards_white)
-        guarded_pieces_white = chess_analysis.compute_to_square_pieces(guard_moves_white)
+        guarded_pieces_white = list(set(chess_analysis.compute_to_square_pieces(guard_moves_white)))
         guarded_pieces_count_white = len(guarded_pieces_white)
         threatened_guarded_pieces_white = chess_analysis.compute_threatened_guarded_pieces(attack_moves_white, guard_moves_white)
         threatened_guarded_pieces_count_white = len(threatened_guarded_pieces_white)
@@ -140,27 +141,33 @@ def main():
         attack_moves_black = chess_analysis.compute_attack_moves(board, chess.WHITE)
         attackers_black = chess_analysis.compute_from_square_pieces(attack_moves_black)
         attackers_count_black = len(attackers_black)
-        threatened_pieces_black = chess_analysis.compute_to_square_pieces(attack_moves_black)
+        threatened_pieces_black = list(set(chess_analysis.compute_to_square_pieces(attack_moves_black)))
         threatened_pieces_count_black = len(threatened_pieces_black)
         guard_moves_black = chess_analysis.compute_guard_moves_alt(board, chess.BLACK)
         guards_black = chess_analysis.compute_from_square_pieces(guard_moves_black)
         guards_count_black = len(guards_black)
-        guarded_pieces_black = chess_analysis.compute_to_square_pieces(guard_moves_black)
+        guarded_pieces_black = list(set(chess_analysis.compute_to_square_pieces(guard_moves_black)))
         guarded_pieces_count_black = len(guarded_pieces_black)
         threatened_guarded_pieces_black = chess_analysis.compute_threatened_guarded_pieces(attack_moves_black, guard_moves_black)
         threatened_guarded_pieces_count_black = len(threatened_guarded_pieces_black)
         unopposed_threats_black = chess_analysis.compute_unopposed_threats(threatened_pieces_black, guarded_pieces_black)
         unopposed_threats_count_black = len(unopposed_threats_black)
 
+        attackers_centipawn_white = chess_analysis.compute_pieces_centipawn_sum(board, attackers_white)
         threatened_pieces_centipawn_white = chess_analysis.compute_pieces_centipawn_sum(board, threatened_pieces_white)
+        guards_centipawn_white = chess_analysis.compute_pieces_centipawn_sum(board, guards_white)
         guarded_pieces_centipawn_white = chess_analysis.compute_pieces_centipawn_sum(board, guarded_pieces_white)
         threatened_guarded_pieces_centipawn_white = chess_analysis.compute_pieces_centipawn_sum(board, threatened_guarded_pieces_white)
         unopposed_threats_centipawn_white = chess_analysis.compute_pieces_centipawn_sum(board, unopposed_threats_white)
+        attackers_centipawn_black = chess_analysis.compute_pieces_centipawn_sum(board, attackers_black)
         threatened_pieces_centipawn_black = chess_analysis.compute_pieces_centipawn_sum(board, threatened_pieces_black)
+        guards_centipawn_black = chess_analysis.compute_pieces_centipawn_sum(board, guards_black)
         guarded_pieces_centipawn_black = chess_analysis.compute_pieces_centipawn_sum(board, guarded_pieces_black)
         threatened_guarded_pieces_centipawn_black = chess_analysis.compute_pieces_centipawn_sum(board, threatened_guarded_pieces_black)
         unopposed_threats_centipawn_black = chess_analysis.compute_pieces_centipawn_sum(board, unopposed_threats_black)
 
+        attack_defense_relation = ((guards_centipawn_white / 2 + guarded_pieces_centipawn_white - threatened_pieces_centipawn_white - attackers_centipawn_white / 2)
+                                   - (guards_centipawn_black / 2 + guarded_pieces_centipawn_black - threatened_pieces_centipawn_black - attackers_centipawn_black / 2))
         if counts["score"]:
             score_shift = chess_analysis.compute_score_shift(prev_score, score_a)
         score_shift_category = chess_analysis.compute_score_shift_category(score_shift)
@@ -257,6 +264,7 @@ def main():
         counts["guarded_pieces_centipawn_all"].append(guarded_pieces_centipawn_white+guarded_pieces_centipawn_black)
         counts["threatened_guarded_pieces_centipawn_all"].append(threatened_guarded_pieces_centipawn_white+threatened_guarded_pieces_centipawn_black)
         counts["unopposed_threats_centipawn_all"].append(unopposed_threats_centipawn_white+unopposed_threats_centipawn_black)
+        counts["attack_defense_relation"].append(attack_defense_relation)
         counts["pawn_ending"].append(pawn_ending)
         counts["rook_ending"].append(rook_ending)
 

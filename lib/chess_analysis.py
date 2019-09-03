@@ -86,7 +86,7 @@ def compute_score(engine, board, time):
     #print(play)
     #print(board.san(play.move))
     #print(board.san(play.ponder))
-    info = engine.analyse(board, chess.engine.Limit(time=time))
+    info = engine.analyse(board, chess.engine.Limit(time=time), info=Info.ALL)
     if info.get("score"):
         score = info.get("score").white().score()
     else:
@@ -104,7 +104,7 @@ def compute_score_by_depth(engine, board, depth):
     #print(play)
     #print(board.san(play.move))
     #print(board.san(play.ponder))
-    info = engine.analyse(board, chess.engine.Limit(depth=depth))
+    info = engine.analyse(board, chess.engine.Limit(depth=depth), info=Info.ALL)
     if info.get("score"):
         score = info.get("score").white().score()
     else:
@@ -205,7 +205,7 @@ def compute_attack_moves(board, color):
     attack_moves = list()
     for square, piece in pieces.items():
         attackers = [i for i in board.attackers(not piece.color, square) if
-                     i > 0 and board.piece_at(i).color == color]
+                     board.piece_at(i).color == color]
         attacker_types = [board.piece_at(i).symbol() for i in attackers]
 
         for a in attackers:
@@ -260,8 +260,7 @@ def compute_guard_moves_alt(board, color):
             #print(get_square_name(square))
             p = c_board.remove_piece_at(square)
             c_board.set_piece_at(square, bait_piece)
-            attackers = [i for i in board.attackers(color, square) if
-                         i > 0]
+            attackers = [i for i in board.attackers(color, square)]
             attacker_types = [board.piece_at(i).symbol() for i in attackers]
             #print(get_square_names(attackers))
             for a in attackers:
@@ -287,6 +286,62 @@ def compute_guard_moves_alt(board, color):
 
     return guard_moves
 
+# Determines the attacking moves the given color can make
+# Determines how many pieces of the current player are being threatened by the opponent
+def compute_attack_defense_relation_centipawn(board, color):
+    c_board = copy.deepcopy(board)
+
+    # loop over one colors pieces
+    pieces = c_board.piece_map()
+    # print("Pieces")
+    # print(pieces)
+    bait_piece_white = chess.Piece(chess.QUEEN, chess.WHITE)
+    bait_piece_black = chess.Piece(chess.QUEEN, chess.BLACK)
+    count = 0
+
+    attack_moves = list()
+    guard_moves = list()
+    attackers_white, attackers_black, threatened_pieces_white, threatened_pieces_black, guards_white, guards_black, guarded_pieces_black, guarded_pieces_white = list()
+    for square, piece in pieces.items():
+        attackers = [i for i in board.attackers(not piece.color, square) if
+                     i > 0 and board.piece_at(i).color == color]
+        attacker_types = [board.piece_at(i).symbol() for i in attackers]
+
+        for a in attackers:
+            attack_moves.append(chess.Move(a, square))
+
+
+    for square, piece in pieces.items():
+
+        if piece.color == color:
+            # print(get_square_name(square))
+            p = c_board.remove_piece_at(square)
+            c_board.set_piece_at(square, bait_piece)
+            attackers = [i for i in board.attackers(color, square) if
+                         i > 0]
+            attacker_types = [board.piece_at(i).symbol() for i in attackers]
+            # print(get_square_names(attackers))
+            for a in attackers:
+                # attacked_pieces.append([chess.SQUARE_NAMES[a], pieces[a].symbol(), chess.SQUARE_NAMES[square], piece.symbol()])
+                guard_moves.append(chess.Move(a, square))
+
+            c_board.remove_piece_at(square)
+            c_board.set_piece_at(square, p)
+
+            # p = c_board.remove_piece_at(square)
+            # c_board.set_piece_at(square, bait_piece)
+
+            # for mov in c_board.legal_moves:
+            #    if mov.to_square == square and c_board.is_capture(mov):
+            # guarded_pieces.append([chess.SQUARE_NAMES[mov.from_square], pieces[mov.from_square].symbol(), chess.SQUARE_NAMES[square], piece.symbol()])
+            #        guard_moves.append(mov)
+            # c_board.remove_piece_at(square)
+            # c_board.set_piece_at(square, p)
+
+        # remove_piece_at()
+        # loop over legal_moves
+        # count moves to removed piece position
+    return attack_moves
 
 def compute_captures(board):
     return [i for i in board.legal_moves if board.is_capture(i)]
@@ -294,12 +349,12 @@ def compute_captures(board):
 
 # Get a list of squares from a moves list using the origin of the move
 def compute_from_square_pieces(moves):
-    return list(set(i.from_square for i in moves))
+    return list(i.from_square for i in moves)
 
 
 # Get a list of squares from a moves list using the destination of the move
 def compute_to_square_pieces(moves):
-    return list(set(i.to_square for i in moves))
+    return list(i.to_square for i in moves)
 
 
 def get_square_name(square):
