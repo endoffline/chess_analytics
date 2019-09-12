@@ -51,6 +51,8 @@ class Timing(Base):
     unopposed_threats_black = Column(Float)
     unopposed_threats_count_black = Column(Float)
     threatened_pieces_centipawn_white = Column(Float)
+    attack_defense_relation1 = Column(Float)
+    attack_defense_relation2 = Column(Float)
     pawn_ending = Column(Float)
     rook_ending = Column(Float)
     time = Column(Float)

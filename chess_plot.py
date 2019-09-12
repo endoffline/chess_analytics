@@ -86,26 +86,29 @@ def plot_graph(act_game, filename, counts):
 
     trace2 = go.Scatter(
         mode='markers+lines',
-        y=counts["attack_defense_relation"],
+        y=counts["attack_defense_relation1"],
         # y = score_history,
         name='Attack/Defense',
 
         line=dict(
             color=('red'),
             width=4,
-        ),
-        marker=dict(
-            size=bubble,
-            line=dict(color='rgb(231, 99, 250)', width=1),
-            cmax=max(best),
-            cmin=min(best),
-            color=best,
-            colorbar=dict(title='Mistakes'),
-            colorscale='Jet'
         )
     )
 
-    data = [trace1, trace2]
+    trace3 = go.Scatter(
+        mode='markers+lines',
+        y=counts["attack_defense_relation2"],
+        # y = score_history,
+        name='Attack/Defense2',
+
+        line=dict(
+            color=('green'),
+            width=4,
+        )
+    )
+
+    data = [trace1, trace2, trace3]
 
     layout = dict(title=act_game.headers["Event"] + " / " + act_game.headers["White"] + " - "
                         + act_game.headers["Black"] + "  " + act_game.headers["Result"] + " / "

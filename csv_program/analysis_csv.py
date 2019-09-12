@@ -9,8 +9,8 @@ def main():
     engine = chess_analysis.connect_to_stockfish()
 
     # Open PGN file
-    filename = "kasparov_karpov_1986"
-    # filename = "kramnik_leko_2001"
+    # filename = "kasparov_karpov_1986"
+    filename = "kramnik_leko_2001"
     # filename = "lcc2017"
     chess_io.init_folder_structure(filename)
     pgn = chess_io.open_pgn(filename)
@@ -88,9 +88,11 @@ def main():
         "guarded_pieces_centipawn_all": [],
         "threatened_guarded_pieces_centipawn_all": [],
         "unopposed_threats_centipawn_all": [],
-        "attack_defense_relation": [],
+        "attack_defense_relation1": [],
+        "attack_defense_relation2": [],
         "pawn_ending": [],  # stores if only kings and pawns are left on the board
         "rook_ending": [],  # stores if only kings, rooks and possible pawns are left on the board
+        "threat_level": []
     }
 
     time = 0.100
@@ -101,26 +103,55 @@ def main():
     chess_io.export_board_svg(board, filename, len(counts["san"]), None)
     prev_score = 0
     score_shift = 0
+    score = 0
+    best_move = None
+    next_best_move = None
     # Iterate through all moves and play them on a board.
-    for mv in act_game.mainline_moves():
+
+    for ply_number, mv in enumerate(act_game.mainline_moves(), start=1):
+        print("ply: ", ply_number)
         # calculate opportunities before applying the move
         fullmove_number = board.fullmove_number
         turn = board.turn
         san = board.san(mv)
+        if board.turn == chess.WHITE:
+            print("side to move: white", board.turn, san)
+        else:
+            print("side to move: black", board.turn, san)
         lan = board.lan(mv)
         move_count = chess_analysis.compute_move_count(board)
         is_capture = board.is_capture(mv)
         is_castling = board.is_castling(mv)
 
+        best_move = next_best_move
+        if best_move is None:  # calculate best move for first turn
+            not_needed, best_move = chess_analysis.compute_score_alternative(engine, board, time)
+        best_move_score = chess_analysis.compute_best_move_score_alternative(engine, board, best_move, time)
+
+        best_move = board.san(best_move)
+
         # apply move
         board.push(mv)
+        # print(board.fen())
+        score, next_best_move = chess_analysis.compute_score_alternative(engine, board, time)
+        # print("truth score: ", chess_analysis.compute_score(engine, board, time))
+        score_shift = chess_analysis.compute_score_shift(prev_score, score)
+        score_shift_category = chess_analysis.compute_score_shift_category(score_shift)
+        best_move_score_diff = abs(best_move_score - score)
+        best_move_score_diff_category = chess_analysis.categorize_best_move_score_diff(best_move_score_diff,
+                                                                                       best_move, san)
 
-        score_a = chess_analysis.compute_score(engine, board, time)
         is_check = board.is_check()
         possible_moves_count = chess_analysis.compute_move_count(board)
         captures = chess_analysis.compute_captures(board)
         is_capture_count = len(captures)
 
+        threat_level = chess_analysis.compute_threat_level(engine, board, time, score)
+        if board.turn == chess.WHITE:
+            print("side to move: white", board.turn)
+        else:
+            print("side to move: black", board.turn)
+        print("threat_level: ", threat_level/possible_moves_count, threat_level, "/", possible_moves_count)
         # White player
         attack_moves_white = chess_analysis.compute_attack_moves(board, chess.BLACK)
         attackers_white = chess_analysis.compute_from_square_pieces(attack_moves_white)
@@ -166,46 +197,23 @@ def main():
         threatened_guarded_pieces_centipawn_black = chess_analysis.compute_pieces_centipawn_sum(board, threatened_guarded_pieces_black)
         unopposed_threats_centipawn_black = chess_analysis.compute_pieces_centipawn_sum(board, unopposed_threats_black)
 
-        attack_defense_relation = ((guards_centipawn_white / 2 + guarded_pieces_centipawn_white - threatened_pieces_centipawn_white - attackers_centipawn_white / 2)
-                                   - (guards_centipawn_black / 2 + guarded_pieces_centipawn_black - threatened_pieces_centipawn_black - attackers_centipawn_black / 2))
-        if counts["score"]:
-            score_shift = chess_analysis.compute_score_shift(prev_score, score_a)
-        score_shift_category = chess_analysis.compute_score_shift_category(score_shift)
+        attack_defense_relation1 = chess_analysis.compute_attack_defense_relation_centipawn1(board)
+        attack_defense_relation2 = chess_analysis.compute_attack_defense_relation_centipawn2(guards_centipawn_white, guarded_pieces_centipawn_white,
+                                               threatened_pieces_centipawn_white, attackers_centipawn_white,
+                                               guards_centipawn_black, guarded_pieces_centipawn_black,
+                                               threatened_pieces_centipawn_black, attackers_centipawn_black)
+
         pawn_ending = chess_analysis.pawn_ending(board.fen())
         rook_ending = chess_analysis.rook_ending(board.fen())
-
-        # remove move to calculate the best move as well as the difference between the best move and the actual move
-        board.pop()
-
-        score_b, best_move_b = chess_analysis.compute_score_alternative(engine, board, time)
-        best_move_score_b = chess_analysis.compute_best_move_score_alternative(engine, board, best_move_b, time)
-
-        best_move_scores = chess_analysis.compute_best_move(engine, board, time)
-
-        if len(best_move_scores) > 1:
-            best_move_scores.sort(key=lambda scores: scores[0], reverse=board.turn)
-            best_move = board.san(best_move_scores[0][1])
-            best_move_score = best_move_scores[0][0]
-            best_move_score_diff = abs(best_move_scores[0][0] - score_a)
-            best_move_score_diff_category = chess_analysis.categorize_best_move_score_diff(best_move_score_diff, best_move, san)
-
-        else:
-            best_move = "-"
-            best_move_score = 0
-            best_move_score_diff = 0
-            best_move_score_diff_category = -1
-
-        prev_score = score_a
-
-        # push actual move to the board again
-        board.push(mv)
+        print("Material: ", chess_analysis.compute_material_centipawn(board))
+        prev_score = score
 
         # append parameters to the arrays
         counts["fullmove_number"].append(fullmove_number)
         counts["turn"].append(turn)
         counts["san"].append(san)
         counts["lan"].append(lan)
-        counts["score"].append(score_a)
+        counts["score"].append(score)
         counts["score_shift"].append(score_shift)
         counts["score_shift_category"].append(score_shift_category)
         counts["move_count"].append(move_count)
@@ -264,15 +272,15 @@ def main():
         counts["guarded_pieces_centipawn_all"].append(guarded_pieces_centipawn_white+guarded_pieces_centipawn_black)
         counts["threatened_guarded_pieces_centipawn_all"].append(threatened_guarded_pieces_centipawn_white+threatened_guarded_pieces_centipawn_black)
         counts["unopposed_threats_centipawn_all"].append(unopposed_threats_centipawn_white+unopposed_threats_centipawn_black)
-        counts["attack_defense_relation"].append(attack_defense_relation)
+        counts["attack_defense_relation1"].append(attack_defense_relation1)
+        counts["attack_defense_relation2"].append(attack_defense_relation2)
         counts["pawn_ending"].append(pawn_ending)
         counts["rook_ending"].append(rook_ending)
+        counts["threat_level"].append(str(threat_level) + "/" + str(possible_moves_count))
 
         chess_io.export_board_svg(board, filename, len(counts["san"]), mv)
-        print('actual_score: ', score_a, ' alt_score: ', score_b)
-        print('actual_best_move: ', best_move, ' best_score: ', best_move_scores[0][0])
-        #print('alt_best_move: ', a_best_move, ' alt_best_score: ', a_best_move_score)
-
+        print('actual_score: ', score)
+        print('actual_best_move: ', best_move, ' best_score: ', best_move_score)
         print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
 
     SVG(chess.svg.board(board=board, size=400))

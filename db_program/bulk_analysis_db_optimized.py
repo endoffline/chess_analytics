@@ -5,7 +5,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from models.base import Base
 from models.game import Game
-from datetime import datetime
+from datetime import datetime, date
 
 
 def bulk_analyse(engine, session, act_game):
@@ -30,8 +30,9 @@ def bulk_analyse(engine, session, act_game):
 
     # Iterate through all moves and play them on a board.
     prev_score = 0
+    best_move = None
     for ply_number, mv in enumerate(act_game.mainline_moves(), start=1):
-        db_mv = chess_moves.compute_move_optimized(engine, board, mv, ply_number, time, prev_score)
+        db_mv, best_move = chess_moves.compute_move_optimized(engine, board, mv, ply_number, time, prev_score, best_move)
         db_game.moves.append(db_mv)
         prev_score = db_mv.score
         print(db_mv)
@@ -46,7 +47,7 @@ def bulk_analyse(engine, session, act_game):
 def main():
 
     chess_engine = chess_analysis.connect_to_stockfish()
-    db_engine = create_engine('sqlite:///chess_optimized.db', echo=True)
+    db_engine = create_engine('sqlite:///bulk_analysis_' + date.today().strftime("%Y-%m-%d") + '.db', echo=True)
     Base.metadata.create_all(db_engine)
     Session = sessionmaker(bind=db_engine)
     session = Session()
@@ -55,6 +56,7 @@ def main():
     # filename = "kramnik_leko_2001"
     # filename = "lcc2017_mini"
     filename = "lcc2017"
+    # filename = "adams_nepomniachtchi_2017"
     chess_io.init_folder_structure(filename)
     pgn = chess_io.open_pgn(filename)
 

@@ -6,14 +6,8 @@ from models.timing import Timing
 from models.timing_score import TimingScore
 from time import monotonic
 
-# time = 0.100
-# times = [0.010, 0.020, 0.050, 0.100, 0.200, 0.500, 1.000, 2.000, 5.000]
-# times = [0.010, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001]
-times = [0.010, 0.020, 0.050, 0.100, 0.200, 0.500, 1.000, 0.001, 0.001]
-depths = [15, 20]
 
-
-def compute_move(engine, board, mv, ply_number, prev_score, best_moves_b):
+def compute_move(engine, board, mv, ply_number, times, depths, prev_score, best_moves_b):
     move_start_time = monotonic()
     scores_a, best_moves_a, best_move_scores_a, best_move_score_diffs_a, best_move_score_diff_categories_a = [], [], [], [], []
     scores_b, next_best_moves_b, best_move_scores_b, best_move_score_diffs_b, best_move_score_diff_categories_b = [], [], [], [], []
@@ -194,19 +188,37 @@ def compute_move(engine, board, mv, ply_number, prev_score, best_moves_b):
     unopposed_threats_count_black = len(unopposed_threats_black)
     t_unopposed_threats_count_black = monotonic() - start
 
+    attackers_centipawn_white = chess_analysis.compute_pieces_centipawn_sum(board, attackers_white)
     start = monotonic()
     threatened_pieces_centipawn_white = chess_analysis.compute_pieces_centipawn_sum(board, threatened_pieces_white)
     t_threatened_pieces_centipawn_white = monotonic() - start
-
+    guards_centipawn_white = chess_analysis.compute_pieces_centipawn_sum(board, guards_white)
     guarded_pieces_centipawn_white = chess_analysis.compute_pieces_centipawn_sum(board, guarded_pieces_white)
     threatened_guarded_pieces_centipawn_white = chess_analysis.compute_pieces_centipawn_sum(board,
                                                                                             threatened_guarded_pieces_white)
     unopposed_threats_centipawn_white = chess_analysis.compute_pieces_centipawn_sum(board, unopposed_threats_white)
+    attackers_centipawn_black = chess_analysis.compute_pieces_centipawn_sum(board, attackers_black)
     threatened_pieces_centipawn_black = chess_analysis.compute_pieces_centipawn_sum(board, threatened_pieces_black)
+    guards_centipawn_black = chess_analysis.compute_pieces_centipawn_sum(board, guards_black)
     guarded_pieces_centipawn_black = chess_analysis.compute_pieces_centipawn_sum(board, guarded_pieces_black)
     threatened_guarded_pieces_centipawn_black = chess_analysis.compute_pieces_centipawn_sum(board,
                                                                                             threatened_guarded_pieces_black)
     unopposed_threats_centipawn_black = chess_analysis.compute_pieces_centipawn_sum(board, unopposed_threats_black)
+
+    start = monotonic()
+    attack_defense_relation1 = chess_analysis.compute_attack_defense_relation_centipawn1(board)
+    t_attack_defense_relation1 = monotonic() - start
+
+    start = monotonic()
+    attack_defense_relation2 = chess_analysis.compute_attack_defense_relation_centipawn2(guards_centipawn_white,
+                                                                                         guarded_pieces_centipawn_white,
+                                                                                         threatened_pieces_centipawn_white,
+                                                                                         attackers_centipawn_white,
+                                                                                         guards_centipawn_black,
+                                                                                         guarded_pieces_centipawn_black,
+                                                                                         threatened_pieces_centipawn_black,
+                                                                                         attackers_centipawn_black)
+    t_attack_defense_relation2 = monotonic() - start
 
     start = monotonic()
     pawn_ending = chess_analysis.pawn_ending(board.fen())
@@ -223,7 +235,7 @@ def compute_move(engine, board, mv, ply_number, prev_score, best_moves_b):
     for i, time in enumerate(times):
         print("Time: ", time)
         start = monotonic()
-        best_move_scores = chess_analysis.compute_best_move(engine, board, time)
+        best_move_scores = chess_analysis.compute_legal_move_scores(engine, board, time)
 
         if len(best_move_scores) > 1:
             best_move_scores.sort(key=lambda scores: scores[0], reverse=board.turn)
@@ -341,7 +353,7 @@ def compute_move(engine, board, mv, ply_number, prev_score, best_moves_b):
 
         if is_first_turn:
             start = monotonic()
-            not_needed, best_move_b = chess_analysis.compute_score_alternative(engine, board, depth)
+            not_needed, best_move_b = chess_analysis.compute_score_alternative_by_depth(engine, board, depth)
             t_best_move_b = monotonic() - start
             best_moves_b.append(best_move_b)
         else:
@@ -659,6 +671,8 @@ def compute_move(engine, board, mv, ply_number, prev_score, best_moves_b):
         unopposed_threats_black=t_unopposed_threats_black,
         unopposed_threats_count_black=t_unopposed_threats_count_black,
         threatened_pieces_centipawn_white=t_threatened_pieces_centipawn_white,
+        attack_defense_relation1=t_attack_defense_relation1,
+        attack_defense_relation2=t_attack_defense_relation2,
         pawn_ending=t_pawn_ending,
         rook_ending=t_rook_ending,
         time=move_runtime
@@ -708,11 +722,15 @@ def compute_move(engine, board, mv, ply_number, prev_score, best_moves_b):
         threatened_guarded_pieces_count_black=threatened_guarded_pieces_count_black,
         unopposed_threats_black=', '.join(str(s) for s in chess_analysis.get_square_names(unopposed_threats_black)),
         unopposed_threats_count_black=unopposed_threats_count_black,
+        attackers_centipawn_white=attackers_centipawn_white,
         threatened_pieces_centipawn_white=threatened_pieces_centipawn_white,
+        guards_centipawn_white=guards_centipawn_white,
         guarded_pieces_centipawn_white=guarded_pieces_centipawn_white,
         threatened_guarded_pieces_centipawn_white=threatened_guarded_pieces_centipawn_white,
         unopposed_threats_centipawn_white=unopposed_threats_centipawn_white,
+        attackers_centipawn_black=attackers_centipawn_black,
         threatened_pieces_centipawn_black=threatened_pieces_centipawn_black,
+        guards_centipawn_black=guards_centipawn_black,
         guarded_pieces_centipawn_black=guarded_pieces_centipawn_black,
         threatened_guarded_pieces_centipawn_black=threatened_guarded_pieces_centipawn_black,
         unopposed_threats_centipawn_black=unopposed_threats_centipawn_black,
@@ -726,6 +744,8 @@ def compute_move(engine, board, mv, ply_number, prev_score, best_moves_b):
         guarded_pieces_centipawn_all=guarded_pieces_centipawn_white+guarded_pieces_centipawn_black,
         threatened_guarded_pieces_centipawn_all=threatened_guarded_pieces_centipawn_white+threatened_guarded_pieces_centipawn_black,
         unopposed_threats_centipawn_all=unopposed_threats_centipawn_white+unopposed_threats_centipawn_black,
+        attack_defense_relation1=attack_defense_relation1,
+        attack_defense_relation2=attack_defense_relation2,
         pawn_ending=pawn_ending,
         rook_ending=rook_ending,
         scores=db_score,
@@ -735,7 +755,7 @@ def compute_move(engine, board, mv, ply_number, prev_score, best_moves_b):
     return db_mv, next_best_moves_b
 
 
-def compute_move_optimized(engine, board, mv, ply_number, time, prev_score):
+def compute_move_optimized(engine, board, mv, ply_number, time, prev_score, best_move):
 
     start = monotonic()
     fullmove_number = board.fullmove_number
@@ -765,8 +785,15 @@ def compute_move_optimized(engine, board, mv, ply_number, time, prev_score):
     is_castling = board.is_castling(mv)
     t_is_castling = monotonic() - start
 
+    if best_move is None: # calculate best move for first turn
+        start = monotonic()
+        not_needed, best_move = chess_analysis.compute_score_alternative(engine, board, time)
+        t_best_move = monotonic() - start
+
     start = monotonic()
-    score, best_move = chess_analysis.compute_score_alternative(engine, board, time)
+    board.push(mv)
+    score, next_best_move = chess_analysis.compute_score_alternative(engine, board, time)
+    board.pop()
     t_score = monotonic() - start
     t_best_move = t_score
 
@@ -917,20 +944,37 @@ def compute_move_optimized(engine, board, mv, ply_number, time, prev_score):
     unopposed_threats_count_black = len(unopposed_threats_black)
     t_unopposed_threats_count_black = monotonic() - start
 
+    attackers_centipawn_white = chess_analysis.compute_pieces_centipawn_sum(board, attackers_white)
     start = monotonic()
     threatened_pieces_centipawn_white = chess_analysis.compute_pieces_centipawn_sum(board, threatened_pieces_white)
     t_threatened_pieces_centipawn_white = monotonic() - start
-
+    guards_centipawn_white = chess_analysis.compute_pieces_centipawn_sum(board, guards_white)
     guarded_pieces_centipawn_white = chess_analysis.compute_pieces_centipawn_sum(board, guarded_pieces_white)
     threatened_guarded_pieces_centipawn_white = chess_analysis.compute_pieces_centipawn_sum(board,
                                                                                             threatened_guarded_pieces_white)
     unopposed_threats_centipawn_white = chess_analysis.compute_pieces_centipawn_sum(board, unopposed_threats_white)
+    attackers_centipawn_black = chess_analysis.compute_pieces_centipawn_sum(board, attackers_black)
     threatened_pieces_centipawn_black = chess_analysis.compute_pieces_centipawn_sum(board, threatened_pieces_black)
+    guards_centipawn_black = chess_analysis.compute_pieces_centipawn_sum(board, guards_black)
     guarded_pieces_centipawn_black = chess_analysis.compute_pieces_centipawn_sum(board, guarded_pieces_black)
     threatened_guarded_pieces_centipawn_black = chess_analysis.compute_pieces_centipawn_sum(board,
                                                                                             threatened_guarded_pieces_black)
     unopposed_threats_centipawn_black = chess_analysis.compute_pieces_centipawn_sum(board, unopposed_threats_black)
 
+    start = monotonic()
+    attack_defense_relation1 = chess_analysis.compute_attack_defense_relation_centipawn1(board)
+    t_attack_defense_relation1 = monotonic() - start
+
+    start = monotonic()
+    attack_defense_relation2 = chess_analysis.compute_attack_defense_relation_centipawn2(guards_centipawn_white,
+                                                                                         guarded_pieces_centipawn_white,
+                                                                                         threatened_pieces_centipawn_white,
+                                                                                         attackers_centipawn_white,
+                                                                                         guards_centipawn_black,
+                                                                                         guarded_pieces_centipawn_black,
+                                                                                         threatened_pieces_centipawn_black,
+                                                                                         attackers_centipawn_black)
+    t_attack_defense_relation2 = monotonic() - start
     start = monotonic()
     pawn_ending = chess_analysis.pawn_ending(board.fen())
     t_pawn_ending = monotonic() - start
@@ -985,6 +1029,8 @@ def compute_move_optimized(engine, board, mv, ply_number, time, prev_score):
         unopposed_threats_black=t_unopposed_threats_black,
         unopposed_threats_count_black=t_unopposed_threats_count_black,
         threatened_pieces_centipawn_white=t_threatened_pieces_centipawn_white,
+        attack_defense_relation1=t_attack_defense_relation1,
+        attack_defense_relation2=t_attack_defense_relation2,
         pawn_ending=t_pawn_ending,
         rook_ending=t_rook_ending,
     )
@@ -1033,28 +1079,34 @@ def compute_move_optimized(engine, board, mv, ply_number, time, prev_score):
         threatened_guarded_pieces_count_black=threatened_guarded_pieces_count_black,
         unopposed_threats_black=', '.join(str(s) for s in chess_analysis.get_square_names(unopposed_threats_black)),
         unopposed_threats_count_black=unopposed_threats_count_black,
+        attackers_centipawn_white=attackers_centipawn_white,
         threatened_pieces_centipawn_white=threatened_pieces_centipawn_white,
+        guards_centipawn_white=guards_centipawn_white,
         guarded_pieces_centipawn_white=guarded_pieces_centipawn_white,
         threatened_guarded_pieces_centipawn_white=threatened_guarded_pieces_centipawn_white,
         unopposed_threats_centipawn_white=unopposed_threats_centipawn_white,
+        attackers_centipawn_black=attackers_centipawn_black,
         threatened_pieces_centipawn_black=threatened_pieces_centipawn_black,
+        guards_centipawn_black=guards_centipawn_black,
         guarded_pieces_centipawn_black=guarded_pieces_centipawn_black,
         threatened_guarded_pieces_centipawn_black=threatened_guarded_pieces_centipawn_black,
         unopposed_threats_centipawn_black=unopposed_threats_centipawn_black,
-        attackers_count_all=attackers_count_white+attackers_count_black,
-        threatened_pieces_count_all=threatened_pieces_count_white+threatened_pieces_count_black,
-        guards_count_all=guards_count_white+guards_count_black,
-        guarded_pieces_count_all=guarded_pieces_count_white+guarded_pieces_count_black,
-        threatened_guarded_pieces_count_all=threatened_guarded_pieces_count_white+threatened_guarded_pieces_count_black,
-        unopposed_threats_count_all=unopposed_threats_count_white+unopposed_threats_count_black,
-        threatened_pieces_centipawn_all=threatened_pieces_centipawn_white+threatened_pieces_centipawn_black,
-        guarded_pieces_centipawn_all=guarded_pieces_centipawn_white+guarded_pieces_centipawn_black,
-        threatened_guarded_pieces_centipawn_all=threatened_guarded_pieces_centipawn_white+threatened_guarded_pieces_centipawn_black,
-        unopposed_threats_centipawn_all=unopposed_threats_centipawn_white+unopposed_threats_centipawn_black,
+        attackers_count_all=attackers_count_white + attackers_count_black,
+        threatened_pieces_count_all=threatened_pieces_count_white + threatened_pieces_count_black,
+        guards_count_all=guards_count_white + guards_count_black,
+        guarded_pieces_count_all=guarded_pieces_count_white + guarded_pieces_count_black,
+        threatened_guarded_pieces_count_all=threatened_guarded_pieces_count_white + threatened_guarded_pieces_count_black,
+        unopposed_threats_count_all=unopposed_threats_count_white + unopposed_threats_count_black,
+        threatened_pieces_centipawn_all=threatened_pieces_centipawn_white + threatened_pieces_centipawn_black,
+        guarded_pieces_centipawn_all=guarded_pieces_centipawn_white + guarded_pieces_centipawn_black,
+        threatened_guarded_pieces_centipawn_all=threatened_guarded_pieces_centipawn_white + threatened_guarded_pieces_centipawn_black,
+        unopposed_threats_centipawn_all=unopposed_threats_centipawn_white + unopposed_threats_centipawn_black,
+        attack_defense_relation1=attack_defense_relation1,
+        attack_defense_relation2=attack_defense_relation2,
         pawn_ending=pawn_ending,
         rook_ending=rook_ending,
         timing=db_timing
     )
 
-    return db_mv
+    return db_mv, next_best_move
 

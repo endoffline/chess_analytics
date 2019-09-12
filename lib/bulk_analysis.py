@@ -110,7 +110,7 @@ def analyse(filename, engine, pgn):
         # remove move to calculate the best move as well as the difference between the best move and the actual move
         board.pop()
 
-        nextmovescores = chess_analysis.compute_best_move(engine, board)
+        nextmovescores = chess_analysis.compute_legal_move_scores(engine, board)
 
         if len(nextmovescores) > 1:
             # next_scores = [*nextmovescores.keys()]

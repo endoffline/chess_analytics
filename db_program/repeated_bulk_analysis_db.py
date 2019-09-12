@@ -12,6 +12,13 @@ from time import monotonic
 def bulk_analyse(engine, session, act_game):
     start_time = monotonic()
 
+    # time = 0.100
+    # times = [0.010, 0.020, 0.050, 0.100, 0.200, 0.500, 1.000, 2.000, 5.000]
+    times = [0.010, 0.001, 0.001, 0.100, 0.001, 0.001, 0.001, 0.001, 0.001]
+    # times = [0.010, 0.020, 0.050, 0.100, 0.200, 0.500, 1.000, 0.001, 0.001]
+    depths = [1, 1]
+    # depths = [15, 20]
+
     # Get the intial board of the game
     board = act_game.board()
 
@@ -36,7 +43,7 @@ def bulk_analyse(engine, session, act_game):
     for ply_number, mv in enumerate(act_game.mainline_moves(), start=1):
         print("new move ##################################")
         for i in range(0, 5):
-            db_mv, temp_best_moves_b = chess_moves.compute_move(engine, board, mv, ply_number, prev_score, best_moves_b)
+            db_mv, temp_best_moves_b = chess_moves.compute_move(engine, board, mv, ply_number, times, depths, prev_score, best_moves_b)
             db_game.moves.append(db_mv)
             print(db_mv)
         prev_score = db_mv.score
@@ -54,7 +61,7 @@ def bulk_analyse(engine, session, act_game):
 def main():
 
     chess_engine = chess_analysis.connect_to_stockfish()
-    db_engine = create_engine('sqlite:///repeated_bulk_analysis_' + date.today().strftime("%Y-%m-%d") +'.db', echo=True)
+    db_engine = create_engine('sqlite:///repeated_bulk_analysis_' + date.today().strftime("%Y-%m-%d") + '.db', echo=True)
     Base.metadata.create_all(db_engine)
     Session = sessionmaker(bind=db_engine)
     session = Session()

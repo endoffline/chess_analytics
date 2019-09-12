@@ -115,40 +115,51 @@ def compute_score_by_depth(engine, board, depth):
 
 def compute_score_alternative(engine, board, time):
     play = engine.play(board=board, limit=chess.engine.Limit(time=time), info=Info.ALL)
-
-    return play.info.get('score').white().score(), play.move
+    print("unfiltered score:", play.info.get('score'), "white:", play.info.get('score').white(), play.move)
+    score = play.info.get('score').white().score()
+    if score is None:
+        score = 0
+    return score, play.move
 
 
 def compute_score_alternative_by_depth(engine, board, depth):
     play = engine.play(board=board, limit=chess.engine.Limit(depth=depth), info=Info.ALL)
-
-    return play.info.get('score').white().score(), play.move
+    score = play.info.get('score').white().score()
+    if score is None:
+        score = 0
+    return score, play.move
 
 
 def compute_best_move_score_alternative(engine, board, move, time):
     board.push(move)
     info = engine.analyse(board=board, limit=chess.engine.Limit(time=time), info=Info.ALL)
     board.pop()
-    return info.get('score').white().score()
+    score = info.get('score').white().score()
+    if score is None:
+        score = 0
+    return score
 
 
 def compute_best_move_score_alternative_by_depth(engine, board, move, depth):
     board.push(move)
     info = engine.analyse(board=board, limit=chess.engine.Limit(depth=depth), info=Info.ALL)
     board.pop()
-    return info.get('score').white().score()
+    score = info.get('score').white().score()
+    if score is None:
+        score = 0
+    return score
 
 
 # Calculates the scores for all possible moves in the current turn
 # and returns a list containing the scores and moves as tuple
-def compute_best_move(engine, board, time):
+def compute_legal_move_scores(engine, board, time):
     movescores = list()
 
     for mov in board.legal_moves:
         board.push(mov)
         # engine.position(board)
         # engine.go(movetime=100)
-        info = engine.analyse(board, chess.engine.Limit(time=time))
+        info = engine.analyse(board=board, limit=chess.engine.Limit(time=time), info=Info.ALL)
         score = info.get("score").white().score()
         if score is not None:
             if board.turn == chess.WHITE:
@@ -157,7 +168,24 @@ def compute_best_move(engine, board, time):
                 movescores.append(tuple((score, mov)))
         board.pop()
 
+    movescores.sort(key=lambda scores: scores[0], reverse=board.turn)
     return movescores
+
+
+def compute_threat_level(engine, board, time, curr_score):
+    move_scores = compute_legal_move_scores(engine, board, time)
+
+    good_scores_count = 0
+    for score, move in move_scores:
+        if (board.turn == chess.WHITE and score >= curr_score) or (board.turn == chess.BLACK and score <= curr_score):
+            good_scores_count += 1
+    if board.turn == chess.WHITE:
+        print("white")
+    else:
+        print("black")
+    pieces = board.piece_map()
+    print("score: ", curr_score, " scores: ", [(i, board.san(j), pieces[j.from_square].symbol()) for i, j in move_scores])
+    return good_scores_count
 
 
 # Calculates the scores for all possible moves in the current turn
@@ -243,7 +271,6 @@ def compute_guard_moves(board, color):
     return guard_moves
 
 
-# TODO fix a1 as guard
 def compute_guard_moves_alt(board, color):
     c_board = copy.deepcopy(board)
 
@@ -286,62 +313,54 @@ def compute_guard_moves_alt(board, color):
 
     return guard_moves
 
+
 # Determines the attacking moves the given color can make
 # Determines how many pieces of the current player are being threatened by the opponent
-def compute_attack_defense_relation_centipawn(board, color):
+def compute_attack_defense_relation_centipawn1(board):
     c_board = copy.deepcopy(board)
-
     # loop over one colors pieces
-    pieces = c_board.piece_map()
-    # print("Pieces")
-    # print(pieces)
-    bait_piece_white = chess.Piece(chess.QUEEN, chess.WHITE)
-    bait_piece_black = chess.Piece(chess.QUEEN, chess.BLACK)
-    count = 0
+    pieces = board.piece_map()
 
-    attack_moves = list()
-    guard_moves = list()
-    attackers_white, attackers_black, threatened_pieces_white, threatened_pieces_black, guards_white, guards_black, guarded_pieces_black, guarded_pieces_white = list()
+    attackers_white, attackers_black, threatened_pieces_white, threatened_pieces_black, guards_white, guards_black, guarded_pieces_white, guarded_pieces_black = ([] for i in range(8))
     for square, piece in pieces.items():
-        attackers = [i for i in board.attackers(not piece.color, square) if
-                     i > 0 and board.piece_at(i).color == color]
-        attacker_types = [board.piece_at(i).symbol() for i in attackers]
+        attackers = [i for i in board.attackers(not piece.color, square)]
+        if piece.color == chess.WHITE:
+            attackers_white.extend(attackers)
+            if len(attackers) > 0:
+                threatened_pieces_white.append(square)
+                guards = [i for i in board.attackers(piece.color, square)]
+                guards_white.extend(guards)
+                if len(guards) > 0:
+                    guarded_pieces_white.append(square)
+        else:
+            attackers_black.extend(attackers)
+            if len(attackers) > 0:
+                threatened_pieces_black.append(square)
+                guards = [i for i in board.attackers(piece.color, square)]
+                guards_black.extend(guards)
+                if len(guards) > 0:
+                    guarded_pieces_black.append(square)
 
-        for a in attackers:
-            attack_moves.append(chess.Move(a, square))
+    score_white = (compute_pieces_centipawn_sum(board, guarded_pieces_white)
+                   + compute_pieces_centipawn_sum(board, guards_white)
+                   - compute_pieces_centipawn_sum(board, threatened_pieces_white)
+                   - compute_pieces_centipawn_sum(board, attackers_white))
+    score_black = (compute_pieces_centipawn_sum(board, guarded_pieces_black)
+                   + compute_pieces_centipawn_sum(board, guards_black)
+                   - compute_pieces_centipawn_sum(board, threatened_pieces_black)
+                   - compute_pieces_centipawn_sum(board, attackers_black))
+    return score_white - score_black
 
 
-    for square, piece in pieces.items():
+def compute_attack_defense_relation_centipawn2(guards_centipawn_white, guarded_pieces_centipawn_white,
+                                               threatened_pieces_centipawn_white, attackers_centipawn_white,
+                                               guards_centipawn_black, guarded_pieces_centipawn_black,
+                                               threatened_pieces_centipawn_black, attackers_centipawn_black):
+    return ((guards_centipawn_white + guarded_pieces_centipawn_white
+             - threatened_pieces_centipawn_white - attackers_centipawn_white)
+            - (guards_centipawn_black + guarded_pieces_centipawn_black
+               - threatened_pieces_centipawn_black - attackers_centipawn_black))
 
-        if piece.color == color:
-            # print(get_square_name(square))
-            p = c_board.remove_piece_at(square)
-            c_board.set_piece_at(square, bait_piece)
-            attackers = [i for i in board.attackers(color, square) if
-                         i > 0]
-            attacker_types = [board.piece_at(i).symbol() for i in attackers]
-            # print(get_square_names(attackers))
-            for a in attackers:
-                # attacked_pieces.append([chess.SQUARE_NAMES[a], pieces[a].symbol(), chess.SQUARE_NAMES[square], piece.symbol()])
-                guard_moves.append(chess.Move(a, square))
-
-            c_board.remove_piece_at(square)
-            c_board.set_piece_at(square, p)
-
-            # p = c_board.remove_piece_at(square)
-            # c_board.set_piece_at(square, bait_piece)
-
-            # for mov in c_board.legal_moves:
-            #    if mov.to_square == square and c_board.is_capture(mov):
-            # guarded_pieces.append([chess.SQUARE_NAMES[mov.from_square], pieces[mov.from_square].symbol(), chess.SQUARE_NAMES[square], piece.symbol()])
-            #        guard_moves.append(mov)
-            # c_board.remove_piece_at(square)
-            # c_board.set_piece_at(square, p)
-
-        # remove_piece_at()
-        # loop over legal_moves
-        # count moves to removed piece position
-    return attack_moves
 
 def compute_captures(board):
     return [i for i in board.legal_moves if board.is_capture(i)]
@@ -414,13 +433,33 @@ def compute_pieces_centipawn_sum(board, squares):
     return sum(compute_pieces_centipawn(board, squares))
 
 
+def compute_material_for_color(board, color):
+    pieces = board.piece_map()
+    squares = list()
+    for square, piece in pieces.items():
+        if piece.color == color:
+            squares.append(square)
+    return squares
+
+
+def compute_material_centipawn(board):
+    material_white = compute_material_for_color(board, chess.WHITE)
+    material_black = compute_material_for_color(board, chess.BLACK)
+
+    print("Material white: ", compute_pieces_centipawn_sum(board, material_white), ", ", material_white)
+    print("Material black: ", compute_pieces_centipawn_sum(board, material_black), ", ", material_black)
+    return compute_pieces_centipawn_sum(board, material_white) - compute_pieces_centipawn_sum(board, material_black)
+
+
 # This method should determine the change in scores between two moves
-# It is therefor possible to determine which player benefits from the move
+# It is therefore possible to determine which player benefits from the move
 # TODO evaluate
 def compute_score_shift(prev_score, curr_score):
-    print(prev_score)
+    print("prev_score: ", prev_score, ", curr_score: ", curr_score)
     if not prev_score:
         prev_score = 0
+    if not curr_score:
+        curr_score = 0
     return abs(curr_score - prev_score)
 
 
