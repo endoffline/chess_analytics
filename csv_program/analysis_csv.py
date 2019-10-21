@@ -42,6 +42,7 @@ def main():
         "best_move_score_diff": [],  # stores the difference between the calculated best move and the actual move
         "best_move_score_diff_category": [],  # stores the category for the calculated difference
         "is_check": [],  # stores if the move checks the opposed king
+        "is_capture_weighted": [],
         "is_capture": [],  # stores is the move actually captures a piece
         "is_castling": [],  # stores if the king has been castled
         "possible_moves_count": [],  # stores the number of possible moves for the next player
@@ -95,7 +96,7 @@ def main():
         "threat_level": []
     }
 
-    time = 0.100
+    time = 0.010
 
     # Get the intial board of the game
     board = act_game.board()
@@ -121,6 +122,7 @@ def main():
         lan = board.lan(mv)
         move_count = chess_analysis.compute_move_count(board)
         is_capture = board.is_capture(mv)
+        is_capture_weighted = chess_analysis.compute_is_capture_weighted(board, mv)
         is_castling = board.is_castling(mv)
 
         best_move = next_best_move
@@ -143,7 +145,7 @@ def main():
 
         is_check = board.is_check()
         possible_moves_count = chess_analysis.compute_move_count(board)
-        captures = chess_analysis.compute_captures(board)
+        captures = chess_analysis.compute_possible_captures(board)
         is_capture_count = len(captures)
 
         threat_level = chess_analysis.compute_threat_level(engine, board, time, score)
@@ -223,6 +225,7 @@ def main():
         counts["best_move_score_diff_category"].append(best_move_score_diff_category)
         counts["is_check"].append(is_check)
         counts["is_capture"].append(is_capture)
+        counts["is_capture_weighted"].append(is_capture_weighted)
         counts["is_castling"].append(is_castling)
         counts["possible_moves_count"].append(possible_moves_count)
         counts["is_capture_count"].append(is_capture_count)

@@ -87,7 +87,7 @@ def analyse(filename, engine, pgn):
         threatened_pieces = chess_analysis.compute_to_square_pieces(attack_moves)
         counts["threatened_pieces"].append(threatened_pieces)
         counts["threatened_pieces_count"].append(len(threatened_pieces))
-        captures = chess_analysis.compute_captures(board)
+        captures = chess_analysis.compute_possible_captures(board)
         counts["is_capture_count"].append(len(captures))
 
         guard_moves = chess_analysis.compute_guard_moves(board)

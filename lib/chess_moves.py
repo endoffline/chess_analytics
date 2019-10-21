@@ -76,7 +76,7 @@ def compute_move(engine, board, mv, ply_number, times, depths, prev_score, best_
     t_possible_moves_count = monotonic() - start
 
     start = monotonic()
-    captures = chess_analysis.compute_captures(board)
+    captures = chess_analysis.compute_possible_captures(board)
     captures = chess_analysis.compute_to_square_pieces(captures)
     t_captures = monotonic() - start
 
@@ -834,7 +834,7 @@ def compute_move_optimized(engine, board, mv, ply_number, time, prev_score, best
     t_possible_moves_count = monotonic() - start
 
     start = monotonic()
-    captures = chess_analysis.compute_captures(board)
+    captures = chess_analysis.compute_possible_captures(board)
     captures = chess_analysis.compute_to_square_pieces(captures)
     t_captures = monotonic() - start
 

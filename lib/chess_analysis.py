@@ -225,6 +225,22 @@ def categorize_best_move_score_diff(best_move_score_diff, best_move, actual_move
     return category
 
 
+def compute_is_capture_weighted(board, move):
+    value = 0
+    if board.is_capture(move):
+        already_deducted = False
+        value = compute_piece_centipawn(board, move.to_square)
+        previous_move = board.pop()
+        if board.is_capture(previous_move):
+            value -= compute_piece_centipawn(board, move.to_square)
+            already_deducted = True
+        board.push(previous_move)
+        if not already_deducted and len(board.attackers(not board.turn, move.to_square)) > 0:
+            value -= compute_piece_centipawn(board, move.from_square)
+
+    return value
+
+
 def compute_attack_moves_for_one_piece(board, color, square, piece):
     attack_moves = list()
     attackers = [i for i in board.attackers(not piece.color, square) if
@@ -371,7 +387,7 @@ def compute_attack_defense_relation_centipawn2(guards_centipawn_white, guarded_p
                - threatened_pieces_centipawn_black - attackers_centipawn_black))
 
 
-def compute_captures(board):
+def compute_possible_captures(board):
     return [i for i in board.legal_moves if board.is_capture(i)]
 
 
@@ -434,13 +450,13 @@ def compute_unopposed_threats(threatened_pieces, guarded_pieces):
 
 
 def compute_piece_centipawn(board, square):
-    centipawns = [100, 300, 300, 500, 900, 0]
-    return centipawns[board.piece_at(square).piece_type-1]
+    piece_values = [100, 300, 300, 500, 900, 0]
+    return piece_values[board.piece_at(square).piece_type-1]
 
 
 def compute_pieces_centipawn(board, squares):
-    centipawns = [100, 300, 300, 500, 900, 0]
-    return [centipawns[board.piece_at(square).piece_type-1] for square in squares]
+    piece_values = [100, 300, 300, 500, 900, 0]
+    return [piece_values[board.piece_at(square).piece_type-1] for square in squares]
 
 
 def compute_pieces_centipawn_sum(board, squares):
