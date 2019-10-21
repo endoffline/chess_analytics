@@ -225,6 +225,15 @@ def categorize_best_move_score_diff(best_move_score_diff, best_move, actual_move
     return category
 
 
+def compute_attack_moves_for_one_piece(board, color, square, piece):
+    attack_moves = list()
+    attackers = [i for i in board.attackers(not piece.color, square) if
+                 board.piece_at(i).color == color]
+    for a in attackers:
+        attack_moves.append(chess.Move(a, square))
+    return attack_moves
+
+
 # Determines the attacking moves the given color can make
 # Determines how many pieces of the current player are being threatened by the opponent
 def compute_attack_moves(board, color):
@@ -424,6 +433,11 @@ def compute_unopposed_threats(threatened_pieces, guarded_pieces):
     return list(unopposed_threats)
 
 
+def compute_piece_centipawn(board, square):
+    centipawns = [100, 300, 300, 500, 900, 0]
+    return centipawns[board.piece_at(square).piece_type-1]
+
+
 def compute_pieces_centipawn(board, squares):
     centipawns = [100, 300, 300, 500, 900, 0]
     return [centipawns[board.piece_at(square).piece_type-1] for square in squares]
@@ -466,6 +480,37 @@ def compute_score_shift(prev_score, curr_score):
 def compute_score_shift_category(diff):
     return diff / 50
 
+
+def compute_xray_attacks(board, color):
+    c_board = copy.deepcopy(board)
+    attack_moves = compute_attack_moves(c_board, color)
+    value = 0
+    # iterate through attacks
+        # remove attacked piece
+        # is attacking piece now attacking another piece?
+        # if yes, check if pin or skewer
+
+    for attacker, threatened_piece in attack_moves:
+        # check if attacking piece is a sliding piece (bishop, rook, queen)
+        if c_board.piece_type_at(attacker) in [3, 4, 5]:
+            c_board.remove_piece_at(threatened_piece)
+            altered_attack_moves = compute_attack_moves_for_one_piece(c_board, color, attacker, c_board.piece_at(attacker))
+
+            xray = (a not in attack_moves for a in altered_attack_moves)
+            if xray is not None:
+                threatened_piece_value = compute_piece_centipawn(c_board, threatened_piece)
+                indirect_threatened_piece_value = compute_piece_centipawn(c_board, xray.to_square)
+                if attacker in board.pin(not color, threatened_piece):
+                    # absolute pin
+                    value += 2000
+                elif indirect_threatened_piece_value > threatened_piece_value:
+                    # pin
+                    value += indirect_threatened_piece_value + (indirect_threatened_piece_value - threatened_piece_value)
+                else:
+                    # skewer
+                    value += threatened_piece_value + (threatened_piece_value - indirect_threatened_piece_value)
+
+    return value
 
 def format_move(move):
     # [chess.SQUARE_NAMES[mov.from_square], pieces[mov.from_square].symbol(), chess.SQUARE_NAMES[square], piece.symbol()]
