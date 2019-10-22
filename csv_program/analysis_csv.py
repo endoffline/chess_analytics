@@ -9,8 +9,8 @@ def main():
     engine = chess_analysis.connect_to_stockfish()
 
     # Open PGN file
-    # filename = "kasparov_karpov_1986"
-    filename = "kramnik_leko_2001"
+    filename = "kasparov_karpov_1986"
+    # filename = "kramnik_leko_2001"
     # filename = "lcc2017"
     chess_io.init_folder_structure(filename)
     pgn = chess_io.open_pgn(filename)

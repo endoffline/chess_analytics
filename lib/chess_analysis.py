@@ -231,8 +231,8 @@ def compute_is_capture_weighted(board, move):
         already_deducted = False
         value = compute_piece_centipawn(board, move.to_square)
         previous_move = board.pop()
-        if board.is_capture(previous_move):
-            value -= compute_piece_centipawn(board, move.to_square)
+        if board.is_capture(previous_move) and previous_move.to_square == move.to_square:
+            value -= compute_piece_centipawn(board, previous_move.to_square)
             already_deducted = True
         board.push(previous_move)
         if not already_deducted and len(board.attackers(not board.turn, move.to_square)) > 0:
