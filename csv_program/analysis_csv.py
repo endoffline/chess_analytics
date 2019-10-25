@@ -160,7 +160,7 @@ def main():
         attackers_count_white = len(attackers_white)
         threatened_pieces_white = list(set(chess_analysis.compute_to_square_pieces(attack_moves_white)))
         threatened_pieces_count_white = len(threatened_pieces_white)
-        guard_moves_white = chess_analysis.compute_guard_moves_alt(board, chess.WHITE)
+        guard_moves_white = chess_analysis.compute_guard_moves(board, chess.WHITE)
         guards_white = chess_analysis.compute_from_square_pieces(guard_moves_white)
         guards_count_white = len(guards_white)
         guarded_pieces_white = list(set(chess_analysis.compute_to_square_pieces(guard_moves_white)))
@@ -169,6 +169,8 @@ def main():
         threatened_guarded_pieces_count_white = len(threatened_guarded_pieces_white)
         unopposed_threats_white = chess_analysis.compute_unopposed_threats(threatened_pieces_white, guarded_pieces_white)
         unopposed_threats_count_white = len(unopposed_threats_white)
+        forking_pieces_white = chess_analysis.compute_forks(board, chess.WHITE)
+        xray_attacks_white = chess_analysis.compute_xray_attacks(board, chess.WHITE)
 
         # Black player
         attack_moves_black = chess_analysis.compute_attack_moves(board, chess.WHITE)
@@ -176,7 +178,7 @@ def main():
         attackers_count_black = len(attackers_black)
         threatened_pieces_black = list(set(chess_analysis.compute_to_square_pieces(attack_moves_black)))
         threatened_pieces_count_black = len(threatened_pieces_black)
-        guard_moves_black = chess_analysis.compute_guard_moves_alt(board, chess.BLACK)
+        guard_moves_black = chess_analysis.compute_guard_moves(board, chess.BLACK)
         guards_black = chess_analysis.compute_from_square_pieces(guard_moves_black)
         guards_count_black = len(guards_black)
         guarded_pieces_black = list(set(chess_analysis.compute_to_square_pieces(guard_moves_black)))
@@ -185,6 +187,8 @@ def main():
         threatened_guarded_pieces_count_black = len(threatened_guarded_pieces_black)
         unopposed_threats_black = chess_analysis.compute_unopposed_threats(threatened_pieces_black, guarded_pieces_black)
         unopposed_threats_count_black = len(unopposed_threats_black)
+        forking_pieces_black = chess_analysis.compute_forks(board, chess.BLACK)
+        xray_attacks_black = chess_analysis.compute_xray_attacks(board, chess.BLACK)
 
         attackers_centipawn_white = chess_analysis.compute_pieces_centipawn_sum(board, attackers_white)
         threatened_pieces_centipawn_white = chess_analysis.compute_pieces_centipawn_sum(board, threatened_pieces_white)
