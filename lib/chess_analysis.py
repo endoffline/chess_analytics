@@ -5,7 +5,7 @@ import chess.engine
 from chess.engine import Info
 import copy
 import numpy as np
-
+from collections import defaultdict
 
 # Connect program with the chess engine Stockfish via UCI
 def connect_to_stockfish():
@@ -456,20 +456,6 @@ def compute_unopposed_threats(threatened_pieces, guarded_pieces):
     return list(unopposed_threats)
 
 
-def compute_piece_centipawn(board, square):
-    piece_values = [100, 300, 300, 500, 900, 2200]
-    return piece_values[board.piece_at(square).piece_type-1]
-
-
-def compute_pieces_centipawn(board, squares):
-    piece_values = [100, 300, 300, 500, 900, 2200]
-    return [piece_values[board.piece_at(square).piece_type-1] for square in squares]
-
-
-def compute_pieces_centipawn_sum(board, squares):
-    return sum(compute_pieces_centipawn(board, squares))
-
-
 def compute_material_for_color(board, color):
     pieces = board.piece_map()
     squares = list()
@@ -565,6 +551,39 @@ def compute_xray_attacks(board, color):
     return value
 
 
+# proposal include centipawn for threatened piece, least valuable attacker and least valuable defender
+def compute_threats_weighted(board, attack_moves, guard_moves, threatened_guarded_squares):
+    value = 0
+    # attack_dict = set()
+    attack_dict = defaultdict(list)
+    guard_dict = defaultdict(list)
+    for attack_move in attack_moves:
+        if attack_move.to_square in threatened_guarded_squares:
+            attack_dict[attack_move.to_square].append(attack_move.from_square)
+        else:
+            value += compute_piece_centipawn(board, attack_move.to_square)
+
+    for guard_move in guard_moves:
+        if guard_move.to_square in threatened_guarded_squares:
+            attack_dict[attack_move.to_square].append(guard_move.from_square)
+
+        # if attack_move.to_square not in guarded_squares:
+        #    value += compute_piece_centipawn(board, attack_move.to_square)
+        # else:
+            # attack_dict.add(attack_move.from_square)
+            # attack_dict[attack_move.to_square].append(attack_move.from_square)
+
+    # if len(attack_dict) > 0:
+    #    value -= compute_pieces_centipawn_sum(board, attack_dict) / len(attack_dict)
+    for guarded_square, attacking_squares in attack_dict.items():
+        value -= min(compute_pieces_centipawn(board, attacking_squares))
+        # value -= compute_pieces_centipawn_sum(board, attacking_squares) / len(attacking_squares)
+    for guarded_square, guarding_squares in guard_dict.items():
+        value += min(compute_pieces_centipawn(board, guarding_squares))
+
+    return value
+
+
 # Get a list of squares from a moves list using the origin of the move
 def compute_from_square_pieces(moves):
     return list(i.from_square for i in moves)
@@ -590,3 +609,17 @@ def format_move(move):
 
 def format_moves(moves):
     return [format_move(move) for move in moves]
+
+
+def compute_piece_centipawn(board, square):
+    piece_values = [100, 300, 300, 500, 900, 2200]
+    return piece_values[board.piece_at(square).piece_type-1]
+
+
+def compute_pieces_centipawn(board, squares):
+    piece_values = [100, 300, 300, 500, 900, 2200]
+    return [piece_values[board.piece_at(square).piece_type-1] for square in squares]
+
+
+def compute_pieces_centipawn_sum(board, squares):
+    return sum(compute_pieces_centipawn(board, squares))

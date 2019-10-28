@@ -59,6 +59,7 @@ def main():
         "threatened_guarded_pieces_count_white": [],
         "unopposed_threats_white": [],
         "unopposed_threats_count_white": [],
+        "threats_weighted_white": [],
         "attackers_black": [],
         "attackers_count_black": [],  # stores the number of possible attacks/threats by the opponent
         "threatened_pieces_black": [],
@@ -71,6 +72,7 @@ def main():
         "threatened_guarded_pieces_count_black": [],
         "unopposed_threats_black": [],
         "unopposed_threats_count_black": [],
+        "threats_weighted_black": [],
         "threatened_pieces_centipawn_white": [],
         "guarded_pieces_centipawn_white": [],
         "threatened_guarded_pieces_centipawn_white": [],
@@ -171,7 +173,8 @@ def main():
         unopposed_threats_count_white = len(unopposed_threats_white)
         forking_pieces_white = chess_analysis.compute_forks(board, chess.WHITE)
         xray_attacks_white = chess_analysis.compute_xray_attacks(board, chess.WHITE)
-
+        threats_weighted_white = chess_analysis.compute_threats_weighted(board, attack_moves_white, guard_moves_white, threatened_guarded_pieces_white)
+        print("weighted: ", threats_weighted_white)
         # Black player
         attack_moves_black = chess_analysis.compute_attack_moves(board, chess.WHITE)
         attackers_black = chess_analysis.compute_from_square_pieces(attack_moves_black)
@@ -202,7 +205,8 @@ def main():
         guarded_pieces_centipawn_black = chess_analysis.compute_pieces_centipawn_sum(board, guarded_pieces_black)
         threatened_guarded_pieces_centipawn_black = chess_analysis.compute_pieces_centipawn_sum(board, threatened_guarded_pieces_black)
         unopposed_threats_centipawn_black = chess_analysis.compute_pieces_centipawn_sum(board, unopposed_threats_black)
-
+        threats_weighted_black = chess_analysis.compute_threats_weighted(board, attack_moves_black, guard_moves_black,
+                                                                         threatened_guarded_pieces_black)
         attack_defense_relation1 = chess_analysis.compute_attack_defense_relation_centipawn1(board)
         attack_defense_relation2 = chess_analysis.compute_attack_defense_relation_centipawn2(guards_centipawn_white, guarded_pieces_centipawn_white,
                                                threatened_pieces_centipawn_white, attackers_centipawn_white,
@@ -245,6 +249,7 @@ def main():
         counts["threatened_guarded_pieces_count_white"].append(threatened_guarded_pieces_count_white)
         counts["unopposed_threats_white"].append(', '.join(str(s) for s in chess_analysis.get_square_names(unopposed_threats_white)))
         counts["unopposed_threats_count_white"].append(unopposed_threats_count_white)
+        counts["threats_weighted_white"].append(threats_weighted_white)
         counts["attackers_black"].append(', '.join(str(s) for s in chess_analysis.get_square_names(attackers_black)))
         counts["attackers_count_black"].append(attackers_count_black)
         counts["threatened_pieces_black"].append(
@@ -260,7 +265,7 @@ def main():
         counts["unopposed_threats_black"].append(
             ', '.join(str(s) for s in chess_analysis.get_square_names(unopposed_threats_black)))
         counts["unopposed_threats_count_black"].append(unopposed_threats_count_black)
-
+        counts["threats_weighted_black"].append(threats_weighted_black)
         counts["threatened_pieces_centipawn_white"].append(threatened_pieces_centipawn_white)
         counts["guarded_pieces_centipawn_white"].append(guarded_pieces_centipawn_white)
         counts["threatened_guarded_pieces_centipawn_white"].append(threatened_guarded_pieces_centipawn_white)
