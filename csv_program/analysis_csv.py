@@ -12,6 +12,7 @@ def main():
     # filename = "kasparov_karpov_1986"
     # filename = "kramnik_leko_2001"
     # filename = "lcc2017"
+    # filename = "dariushmoalemi_grumpy123us_2018"
     # filename = "tissir_dreev_2004"
     filename = "short_vaganian_1989"
     chess_io.init_folder_structure(filename)

@@ -575,11 +575,12 @@ def compute_threats_weighted(board, attack_moves, guard_moves, threatened_guarde
 
     # if len(attack_dict) > 0:
     #    value -= compute_pieces_centipawn_sum(board, attack_dict) / len(attack_dict)
+    already_deducted_attacking_squares = set()
     for guarded_square, attacking_squares in attack_dict.items():
         value -= min(compute_pieces_centipawn(board, attacking_squares))
         # value -= compute_pieces_centipawn_sum(board, attacking_squares) / len(attacking_squares)
-    for guarded_square, guarding_squares in guard_dict.items():
-        value += min(compute_pieces_centipawn(board, guarding_squares))
+    # for guarded_square, guarding_squares in guard_dict.items():
+    #    value += min(compute_pieces_centipawn(board, guarding_squares))
 
     return value
 
