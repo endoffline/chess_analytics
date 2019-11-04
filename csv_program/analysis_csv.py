@@ -9,9 +9,11 @@ def main():
     engine = chess_analysis.connect_to_stockfish()
 
     # Open PGN file
-    filename = "kasparov_karpov_1986"
+    # filename = "kasparov_karpov_1986"
     # filename = "kramnik_leko_2001"
     # filename = "lcc2017"
+    # filename = "tissir_dreev_2004"
+    filename = "short_vaganian_1989"
     chess_io.init_folder_structure(filename)
     pgn = chess_io.open_pgn(filename)
 
@@ -302,6 +304,7 @@ def main():
     print(counts)
     chess_io.write_dict_to_csv(filename, counts)
     print("after csv")
+    engine.quit()
     return 0
 
 
