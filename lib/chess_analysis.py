@@ -7,6 +7,7 @@ import copy
 import numpy as np
 from collections import defaultdict
 
+
 # Connect program with the chess engine Stockfish via UCI
 def connect_to_stockfish():
     return chess.engine.SimpleEngine.popen_uci("engine/stockfish_10_x64.exe")
@@ -17,6 +18,7 @@ def read_game(pgn):
 
 
 # Convert the board from the FEN notation to an 3 dimensional array for easier evaluation
+# deprecated
 def fen_to_tensor(input_str):
     pieces_str = "PNBRQK"
     pieces_str += pieces_str.lower()
@@ -49,12 +51,14 @@ def fen_to_tensor(input_str):
     return boardtensor
 
 
+# deprecated
 def count_pieces(fen):
     boardtensor = fen_to_tensor(fen)
     count = np.sum(np.abs(boardtensor))
     return count
 
 
+# deprecated
 def pawn_ending(fen):
     boardtensor = fen_to_tensor(fen)
     counts = np.sum(np.abs(boardtensor), axis=(0, 1))
@@ -64,6 +68,7 @@ def pawn_ending(fen):
         return False
 
 
+# deprecated
 def rook_ending(fen):
     boardtensor = fen_to_tensor(fen)
     counts = np.sum(np.abs(boardtensor), axis=(0, 1))
@@ -153,7 +158,7 @@ def compute_best_move_score_alternative_by_depth(engine, board, move, depth):
 # Calculates the scores for all possible moves in the current turn
 # and returns a list containing the scores and moves as tuple
 def compute_legal_move_scores(engine, board, time):
-    movescores = list()
+    move_scores = list()
 
     for mov in board.legal_moves:
         board.push(mov)
@@ -163,16 +168,17 @@ def compute_legal_move_scores(engine, board, time):
         score = info.get("score").white().score()
         if score is not None:
             if board.turn == chess.WHITE:
-                movescores.append(tuple((score, mov)))
+                move_scores.append(tuple((score, mov)))
             elif board.turn == chess.BLACK:
-                movescores.append(tuple((score, mov)))
+                move_scores.append(tuple((score, mov)))
         board.pop()
 
-    movescores.sort(key=lambda scores: scores[0], reverse=board.turn)
-    return movescores
+    move_scores.sort(key=lambda scores: scores[0], reverse=board.turn)
+    return move_scores
 
 
-def compute_threat_level(engine, board, time, curr_score):
+# introduce tolerance of 30 to 50 centipawn
+def compute_possible_moves_quality(engine, board, time, curr_score):
     move_scores = compute_legal_move_scores(engine, board, time)
 
     good_scores_count = 0
@@ -191,7 +197,7 @@ def compute_threat_level(engine, board, time, curr_score):
 # Calculates the scores for all possible moves in the current turn
 # and returns a list containing the scores and moves as tuple
 def compute_best_move_by_depth(engine, board, depth):
-    movescores = list()
+    move_scores = list()
 
     for mov in board.legal_moves:
         board.push(mov)
@@ -201,12 +207,12 @@ def compute_best_move_by_depth(engine, board, depth):
         score = info.get("score").white().score()
         if score is not None:
             if board.turn == chess.WHITE:
-                movescores.append(tuple((score, mov)))
+                move_scores.append(tuple((score, mov)))
             elif board.turn == chess.BLACK:
-                movescores.append(tuple((score, mov)))
+                move_scores.append(tuple((score, mov)))
         board.pop()
 
-    return movescores
+    return move_scores
 
 
 # Categorizes a move being a blunder(4), mistake(3), inaccuracy(2), neutral move(1) or good move(0)
@@ -229,14 +235,14 @@ def compute_is_capture_weighted(board, move):
     value = 0
     if board.is_capture(move):
         already_deducted = False
-        value = compute_piece_centipawn(board, move.to_square)
+        value = get_piece_centipawn(board, move.to_square)
         previous_move = board.pop()
         if board.is_capture(previous_move) and previous_move.to_square == move.to_square:
-            value -= compute_piece_centipawn(board, previous_move.to_square)
+            value -= get_piece_centipawn(board, previous_move.to_square)
             already_deducted = True
         board.push(previous_move)
         if not already_deducted and len(board.attackers(not board.turn, move.to_square)) > 0:
-            value -= compute_piece_centipawn(board, move.from_square)
+            value -= get_piece_centipawn(board, move.from_square)
 
     return value
 
@@ -371,13 +377,13 @@ def compute_attack_defense_relation_centipawn1(board):
     # loop over one colors pieces
     pieces = board.piece_map()
 
-    attackers_white, attackers_black, threatened_pieces_white, threatened_pieces_black, guards_white, guards_black, guarded_pieces_white, guarded_pieces_black = ([] for i in range(8))
+    attackers_white, attackers_black, attacked_pieces_white, attacked_pieces_black, guards_white, guards_black, guarded_pieces_white, guarded_pieces_black = ([] for i in range(8))
     for square, piece in pieces.items():
         attackers = [i for i in board.attackers(not piece.color, square)]
         if piece.color == chess.WHITE:
             attackers_white.extend(attackers)
             if len(attackers) > 0:
-                threatened_pieces_white.append(square)
+                attacked_pieces_white.append(square)
                 guards = [i for i in board.attackers(piece.color, square)]
                 guards_white.extend(guards)
                 if len(guards) > 0:
@@ -385,31 +391,31 @@ def compute_attack_defense_relation_centipawn1(board):
         else:
             attackers_black.extend(attackers)
             if len(attackers) > 0:
-                threatened_pieces_black.append(square)
+                attacked_pieces_black.append(square)
                 guards = [i for i in board.attackers(piece.color, square)]
                 guards_black.extend(guards)
                 if len(guards) > 0:
                     guarded_pieces_black.append(square)
 
-    score_white = (compute_pieces_centipawn_sum(board, guarded_pieces_white)
-                   + compute_pieces_centipawn_sum(board, guards_white)
-                   - compute_pieces_centipawn_sum(board, threatened_pieces_white)
-                   - compute_pieces_centipawn_sum(board, attackers_white))
-    score_black = (compute_pieces_centipawn_sum(board, guarded_pieces_black)
-                   + compute_pieces_centipawn_sum(board, guards_black)
-                   - compute_pieces_centipawn_sum(board, threatened_pieces_black)
-                   - compute_pieces_centipawn_sum(board, attackers_black))
+    score_white = (get_pieces_centipawn_sum(board, guarded_pieces_white)
+                   + get_pieces_centipawn_sum(board, guards_white)
+                   - get_pieces_centipawn_sum(board, attacked_pieces_white)
+                   - get_pieces_centipawn_sum(board, attackers_white))
+    score_black = (get_pieces_centipawn_sum(board, guarded_pieces_black)
+                   + get_pieces_centipawn_sum(board, guards_black)
+                   - get_pieces_centipawn_sum(board, attacked_pieces_black)
+                   - get_pieces_centipawn_sum(board, attackers_black))
     return score_white - score_black
 
 
 def compute_attack_defense_relation_centipawn2(guards_centipawn_white, guarded_pieces_centipawn_white,
-                                               threatened_pieces_centipawn_white, attackers_centipawn_white,
+                                               attacked_pieces_centipawn_white, attackers_centipawn_white,
                                                guards_centipawn_black, guarded_pieces_centipawn_black,
-                                               threatened_pieces_centipawn_black, attackers_centipawn_black):
+                                               attacked_pieces_centipawn_black, attackers_centipawn_black):
     return ((guards_centipawn_white + guarded_pieces_centipawn_white
-             - threatened_pieces_centipawn_white - attackers_centipawn_white)
+             - attacked_pieces_centipawn_white - attackers_centipawn_white)
             - (guards_centipawn_black + guarded_pieces_centipawn_black
-               - threatened_pieces_centipawn_black - attackers_centipawn_black))
+               - attacked_pieces_centipawn_black - attackers_centipawn_black))
 
 
 def compute_possible_captures(board):
@@ -436,7 +442,7 @@ def compute_possible_captures(board):
 #    return threatened_guarded_pieces
 
 
-def compute_threatened_guarded_pieces(attack_moves, guard_moves):
+def compute_attacked_guarded_pieces(attack_moves, guard_moves):
     threatened_guarded_pieces = list()
     for threatening_move in attack_moves:
         for guarding_move in guard_moves:
@@ -469,15 +475,14 @@ def compute_material_centipawn(board):
     material_white = compute_material_for_color(board, chess.WHITE)
     material_black = compute_material_for_color(board, chess.BLACK)
 
-    print("Material white: ", compute_pieces_centipawn_sum(board, material_white), ", ", material_white)
-    print("Material black: ", compute_pieces_centipawn_sum(board, material_black), ", ", material_black)
-    return compute_pieces_centipawn_sum(board, material_white) - compute_pieces_centipawn_sum(board, material_black)
+    print("Material white: ", get_pieces_centipawn_sum(board, material_white), ", ", material_white)
+    print("Material black: ", get_pieces_centipawn_sum(board, material_black), ", ", material_black)
+    return get_pieces_centipawn_sum(board, material_white) - get_pieces_centipawn_sum(board, material_black)
 
 
 # This method should determine the change in scores between two moves
 # It is therefore possible to determine which player benefits from the move
-# TODO evaluate
-def compute_score_shift(prev_score, curr_score):
+def compute_score_change(prev_score, curr_score):
     print("prev_score: ", prev_score, ", curr_score: ", curr_score)
     if not prev_score:
         prev_score = 0
@@ -486,7 +491,7 @@ def compute_score_shift(prev_score, curr_score):
     return abs(curr_score - prev_score)
 
 
-def compute_score_shift_category(diff):
+def compute_score_change_category(diff):
     return diff / 50
 
 
@@ -502,7 +507,7 @@ def compute_forks(board, color):
                 if board.color_at(attacked_square) is (not color):
                     # only consider pieces with defended pieces with higher value or undefended pieces
                     if len(compute_guard_moves_for_one_piece(board, attacked_square)) > 0:
-                        if compute_piece_centipawn(board, attacked_square) > compute_piece_centipawn(board, square):
+                        if get_piece_centipawn(board, attacked_square) > get_piece_centipawn(board, square):
                             attacked_count += 1
                     else:
                         attacked_count += 1
@@ -527,28 +532,57 @@ def compute_xray_attacks(board, color):
 
     for move in attack_moves:
         attacker = move.from_square
-        threatened_square = move.to_square
+        attacked_square = move.to_square
         # check if attacking piece is a sliding piece (bishop, rook, queen)
         if c_board.piece_type_at(attacker) in [3, 4, 5]:
-            threatened_piece_value = compute_piece_centipawn(c_board, threatened_square)
-            threatened_piece = c_board.remove_piece_at(threatened_square)
+            attacked_piece_value = get_piece_centipawn(c_board, attacked_square)
+            attacked_piece = c_board.remove_piece_at(attacked_square)
             altered_attack_moves = compute_attack_moves_for_one_piece(c_board, attacker)
 
             xray = [a for a in altered_attack_moves if a not in attack_moves]
 
             if xray:
-                indirect_threatened_piece_value = compute_piece_centipawn(c_board, xray[0].to_square)
+                indirectly_attacked_piece_value = get_piece_centipawn(c_board, xray[0].to_square)
 
-                if indirect_threatened_piece_value > threatened_piece_value:
+                if indirectly_attacked_piece_value > attacked_piece_value:
                     # pin
-                    value += indirect_threatened_piece_value + (indirect_threatened_piece_value - threatened_piece_value)
+                    value += indirectly_attacked_piece_value + (indirectly_attacked_piece_value - attacked_piece_value)
                     print("pin: ", get_square_name(attacker))
                 else:
                     # skewer
-                    value += threatened_piece_value + (threatened_piece_value - indirect_threatened_piece_value)
+                    value += attacked_piece_value + (attacked_piece_value - indirectly_attacked_piece_value)
                     print("skewer: ", get_square_name(attacker))
-            c_board.set_piece_at(threatened_square, threatened_piece)
+            c_board.set_piece_at(attacked_square, attacked_piece)
     return value
+
+
+# calculates the number of pins and skewers
+def compute_xray_attacks_counts(board, color):
+    c_board = copy.deepcopy(board)
+    attack_moves = compute_attack_moves(c_board, color)
+    pin_count = 0
+    skewer_count = 0
+
+    for move in attack_moves:
+        attacker = move.from_square
+        attacked_square = move.to_square
+        # check if attacking piece is a sliding piece (bishop, rook, queen)
+        if c_board.piece_type_at(attacker) in [3, 4, 5]:
+            attacked_piece_value = get_piece_centipawn(c_board, attacked_square)
+            attacked_piece = c_board.remove_piece_at(attacked_square)
+            altered_attack_moves = compute_attack_moves_for_one_piece(c_board, attacker)
+
+            xray = [a for a in altered_attack_moves if a not in attack_moves]
+
+            if xray:
+                indirectly_attacked_piece_value = get_piece_centipawn(c_board, xray[0].to_square)
+
+                if indirectly_attacked_piece_value > attacked_piece_value:
+                    pin_count += 1
+                else:
+                    skewer_count += 1
+            c_board.set_piece_at(attacked_square, attacked_piece)
+    return pin_count, skewer_count
 
 
 # proposal include centipawn for threatened piece, least valuable attacker and least valuable defender
@@ -561,7 +595,7 @@ def compute_threats_weighted(board, attack_moves, guard_moves, threatened_guarde
         if attack_move.to_square in threatened_guarded_squares:
             attack_dict[attack_move.to_square].append(attack_move.from_square)
         else:
-            value += compute_piece_centipawn(board, attack_move.to_square)
+            value += get_piece_centipawn(board, attack_move.to_square)
 
     for guard_move in guard_moves:
         if guard_move.to_square in threatened_guarded_squares:
@@ -577,7 +611,7 @@ def compute_threats_weighted(board, attack_moves, guard_moves, threatened_guarde
     #    value -= compute_pieces_centipawn_sum(board, attack_dict) / len(attack_dict)
     already_deducted_attacking_squares = set()
     for guarded_square, attacking_squares in attack_dict.items():
-        value -= min(compute_pieces_centipawn(board, attacking_squares))
+        value -= min(get_pieces_centipawn(board, attacking_squares))
         # value -= compute_pieces_centipawn_sum(board, attacking_squares) / len(attacking_squares)
     # for guarded_square, guarding_squares in guard_dict.items():
     #    value += min(compute_pieces_centipawn(board, guarding_squares))
@@ -585,13 +619,26 @@ def compute_threats_weighted(board, attack_moves, guard_moves, threatened_guarde
     return value
 
 
+# proposal include centipawn for threatened piece, least valuable attacker and least valuable defender
+def compute_threats_weighted_count(board, attack_moves, guard_moves, attacked_guarded_squares):
+    threat_moves = list()
+    for attack_move in attack_moves:
+        if attack_move.to_square in attacked_guarded_squares:
+            if get_piece_centipawn(board, attack_move.to_square) > get_piece_centipawn(board, attack_move.from_square):
+                threat_moves.append(attack_move)
+        else:
+            threat_moves.append(attack_move)
+
+    return threat_moves
+
+
 # Get a list of squares from a moves list using the origin of the move
-def compute_from_square_pieces(moves):
+def get_from_square_pieces(moves):
     return list(i.from_square for i in moves)
 
 
 # Get a list of squares from a moves list using the destination of the move
-def compute_to_square_pieces(moves):
+def get_to_square_pieces(moves):
     return list(i.to_square for i in moves)
 
 
@@ -612,15 +659,15 @@ def format_moves(moves):
     return [format_move(move) for move in moves]
 
 
-def compute_piece_centipawn(board, square):
+def get_piece_centipawn(board, square):
     piece_values = [100, 300, 300, 500, 900, 2200]
     return piece_values[board.piece_at(square).piece_type-1]
 
 
-def compute_pieces_centipawn(board, squares):
+def get_pieces_centipawn(board, squares):
     piece_values = [100, 300, 300, 500, 900, 2200]
     return [piece_values[board.piece_at(square).piece_type-1] for square in squares]
 
 
-def compute_pieces_centipawn_sum(board, squares):
-    return sum(compute_pieces_centipawn(board, squares))
+def get_pieces_centipawn_sum(board, squares):
+    return sum(get_pieces_centipawn(board, squares))
