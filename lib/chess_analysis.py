@@ -68,6 +68,28 @@ def pawn_ending(fen):
         return False
 
 
+def get_pieces_list(board):
+    pieces = dict()
+    pieces[chess.PAWN] = board.pieces(chess.PAWN, chess.WHITE).union(board.pieces(chess.PAWN, chess.BLACK))
+    pieces[chess.KNIGHT] = board.pieces(chess.KNIGHT, chess.WHITE).union(board.pieces(chess.KNIGHT, chess.BLACK))
+    pieces[chess.BISHOP] = board.pieces(chess.BISHOP, chess.WHITE).union(board.pieces(chess.BISHOP, chess.BLACK))
+    pieces[chess.ROOK] = board.pieces(chess.ROOK, chess.WHITE).union(board.pieces(chess.ROOK, chess.BLACK))
+    pieces[chess.QUEEN] = board.pieces(chess.QUEEN, chess.WHITE).union(board.pieces(chess.QUEEN, chess.BLACK))
+    pieces[chess.KING] = board.pieces(chess.KING, chess.WHITE).union(board.pieces(chess.KING, chess.BLACK))
+
+    return pieces
+
+
+def compute_pawn_ending(board):
+    p = get_pieces_list(board)
+
+    return len(p[chess.PAWN]) > 0 and \
+           len(p[chess.KNIGHT]) == 0 and \
+           len(p[chess.BISHOP]) == 0 and \
+           len(p[chess.ROOK]) == 0 and \
+           len(p[chess.QUEEN]) == 0
+
+
 # deprecated
 def rook_ending(fen):
     boardtensor = fen_to_tensor(fen)
@@ -76,6 +98,16 @@ def rook_ending(fen):
         return True
     else:
         return False
+
+
+def compute_rook_ending(board):
+    p = get_pieces_list(board)
+
+    return len(p[chess.PAWN]) >= 0 and \
+           len(p[chess.KNIGHT]) == 0 and \
+           len(p[chess.BISHOP]) == 0 and \
+           len(p[chess.ROOK]) > 0 and \
+           len(p[chess.QUEEN]) == 0
 
 
 def compute_move_count(board):
@@ -525,7 +557,7 @@ def compute_forks(board, color):
 
 
 # todo rethink return parameter
-def compute_xray_attacks(board, color):
+def compute_xray_attacks_weighted(board, color):
     c_board = copy.deepcopy(board)
     attack_moves = compute_attack_moves(c_board, color)
     value = 0
@@ -534,7 +566,7 @@ def compute_xray_attacks(board, color):
         attacker = move.from_square
         attacked_square = move.to_square
         # check if attacking piece is a sliding piece (bishop, rook, queen)
-        if c_board.piece_type_at(attacker) in [3, 4, 5]:
+        if c_board.piece_type_at(attacker) in [chess.BISHOP, chess.ROOK, chess.QUEEN]:
             attacked_piece_value = get_piece_centipawn(c_board, attacked_square)
             attacked_piece = c_board.remove_piece_at(attacked_square)
             altered_attack_moves = compute_attack_moves_for_one_piece(c_board, attacker)
@@ -557,11 +589,11 @@ def compute_xray_attacks(board, color):
 
 
 # calculates the number of pins and skewers
-def compute_xray_attacks_counts(board, color):
+def compute_xray_attack_moves(board, color):
     c_board = copy.deepcopy(board)
     attack_moves = compute_attack_moves(c_board, color)
-    pin_count = 0
-    skewer_count = 0
+    pin_moves = list()
+    skewer_moves = list()
 
     for move in attack_moves:
         attacker = move.from_square
@@ -578,11 +610,11 @@ def compute_xray_attacks_counts(board, color):
                 indirectly_attacked_piece_value = get_piece_centipawn(c_board, xray[0].to_square)
 
                 if indirectly_attacked_piece_value > attacked_piece_value:
-                    pin_count += 1
+                    pin_moves.append(move)
                 else:
-                    skewer_count += 1
+                    skewer_moves.append(move)
             c_board.set_piece_at(attacked_square, attacked_piece)
-    return pin_count, skewer_count
+    return pin_moves, skewer_moves
 
 
 # proposal include centipawn for threatened piece, least valuable attacker and least valuable defender

@@ -32,6 +32,8 @@ def bulk_analyse(engine, session, act_game):
                    round=act_game.headers["Round"],
                    white=act_game.headers["White"],
                    black=act_game.headers["Black"],
+                   whiteelo=act_game.headers["WhiteElo"],
+                   blackelo=act_game.headers["BlackElo"],
                    result=act_game.headers["Result"]
                    )
 

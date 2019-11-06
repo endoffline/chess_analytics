@@ -13,8 +13,8 @@ def bulk_analyse(engine, session, act_game):
     # Get the intial board of the game
     board = act_game.board()
 
-    print(act_game.headers["Event"] + " / " + act_game.headers["White"] +
-          " - " + act_game.headers["Black"] + "  " + act_game.headers["Result"] +
+    print(act_game.headers["Event"] + " / " + act_game.headers["White"] + "(" + act_game.headers["WhiteElo"] + ") " +
+          " - " + act_game.headers["Black"] + "(" + act_game.headers["BlackElo"] + ") " + act_game.headers["Result"] +
           " / " + act_game.headers["Date"])
 
     db_game = Game(event=act_game.headers["Event"],
@@ -23,6 +23,8 @@ def bulk_analyse(engine, session, act_game):
                    round=act_game.headers["Round"],
                    white=act_game.headers["White"],
                    black=act_game.headers["Black"],
+                   whiteelo=(int(act_game.headers["WhiteElo"]) if act_game.headers["WhiteElo"].isdigit() else None),
+                   blackelo=(int(act_game.headers["BlackElo"]) if act_game.headers["BlackElo"].isdigit() else None),
                    result=act_game.headers["Result"]
                    )
 
@@ -52,10 +54,10 @@ def main():
     Session = sessionmaker(bind=db_engine)
     session = Session()
     # Open PGN file
-    # filename = "kasparov_karpov_1986"
+    filename = "kasparov_karpov_1986"
     # filename = "kramnik_leko_2001"
     # filename = "lcc2017_mini"
-    filename = "lcc2017"
+    # filename = "lcc2017"
     # filename = "adams_nepomniachtchi_2017"
     chess_io.init_folder_structure(filename)
     pgn = chess_io.open_pgn(filename)
