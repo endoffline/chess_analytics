@@ -54,9 +54,9 @@ def main():
     Session = sessionmaker(bind=db_engine)
     session = Session()
     # Open PGN file
-    filename = "kasparov_karpov_1986"
+    # filename = "kasparov_karpov_1986"
     # filename = "kramnik_leko_2001"
-    # filename = "lcc2017_mini"
+    filename = "lcc2017_mini"
     # filename = "lcc2017"
     # filename = "adams_nepomniachtchi_2017"
     chess_io.init_folder_structure(filename)
@@ -71,6 +71,9 @@ def main():
             break
 
         bulk_analyse(chess_engine, session, act_game)
+
+    session.close()
+    chess_engine.quit()
 
 
 main()

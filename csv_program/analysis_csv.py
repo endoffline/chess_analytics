@@ -179,7 +179,7 @@ def main():
         pin_moves_white, skewer_moves_white = chess_analysis.compute_xray_attack_moves(board, chess.WHITE)
         pin_count_white = len(pin_moves_white)
         skewer_count_white = len(skewer_moves_white)
-        threats_weighted_count_white = chess_analysis.compute_threats_weighted_count(board, attack_moves_white, guard_moves_white, attacked_guarded_pieces_white)
+        threats_weighted_count_white = chess_analysis.compute_threat_moves_weighted(board, attack_moves_white, guard_moves_white, attacked_guarded_pieces_white)
         print("weighted: ", threats_weighted_white)
         # Black player
         attack_moves_black = chess_analysis.compute_attack_moves(board, chess.WHITE)
@@ -200,7 +200,7 @@ def main():
         pin_moves_black, skewer_moves_black = chess_analysis.compute_xray_attack_moves(board, chess.BLACK)
         pin_count_black = len(pin_moves_black)
         skewer_count_black = len(skewer_moves_black)
-        threats_weighted_count_black = chess_analysis.compute_threats_weighted_count(board, attack_moves_black, guard_moves_black, attacked_guarded_pieces_black)
+        threats_weighted_count_black = chess_analysis.compute_threat_moves_weighted(board, attack_moves_black, guard_moves_black, attacked_guarded_pieces_black)
 
         attackers_centipawn_white = chess_analysis.get_pieces_centipawn_sum(board, attackers_white)
         attacked_pieces_centipawn_white = chess_analysis.get_pieces_centipawn_sum(board, attacked_pieces_white)

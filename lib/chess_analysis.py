@@ -652,7 +652,7 @@ def compute_threats_weighted(board, attack_moves, guard_moves, threatened_guarde
 
 
 # proposal include centipawn for threatened piece, least valuable attacker and least valuable defender
-def compute_threats_weighted_count(board, attack_moves, guard_moves, attacked_guarded_squares):
+def compute_threat_moves_weighted(board, attack_moves, guard_moves, attacked_guarded_squares):
     threat_moves = list()
     for attack_move in attack_moves:
         if attack_move.to_square in attacked_guarded_squares:
