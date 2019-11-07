@@ -838,7 +838,7 @@ def compute_move_optimized(engine, board, mv, ply_number, time, prev_score, best
 
     start = monotonic()
     possible_moves_quality = chess_analysis.compute_possible_moves_quality(engine, board, time, score)
-    t_possible_moves_count = monotonic() - start
+    t_possible_moves_quality = monotonic() - start
 
     start = monotonic()
     captures = chess_analysis.compute_possible_captures(board)
@@ -918,10 +918,8 @@ def compute_move_optimized(engine, board, mv, ply_number, time, prev_score, best
     skewer_count_white = len(skewer_moves_white)
 
     start = monotonic()
-    threats_weighted_count_white = len(chess_analysis.compute_threat_moves_weighted(board,
-                                                                                attack_moves_white,
-                                                                                guard_moves_white,
-                                                                                attacked_guarded_pieces_white))
+    threats_weighted_count_white = len(
+        chess_analysis.compute_threat_moves_weighted(board, attack_moves_white, attacked_guarded_pieces_white))
     t_threats_weighted_count_white = monotonic() - start
 
     # Black player
@@ -992,10 +990,8 @@ def compute_move_optimized(engine, board, mv, ply_number, time, prev_score, best
     skewer_count_black = len(skewer_moves_black)
 
     start = monotonic()
-    threats_weighted_count_black = len(chess_analysis.compute_threat_moves_weighted(board,
-                                                                                attack_moves_black,
-                                                                                guard_moves_black,
-                                                                                attacked_guarded_pieces_black))
+    threats_weighted_count_black = len(
+        chess_analysis.compute_threat_moves_weighted(board, attack_moves_black, attacked_guarded_pieces_black))
     t_threats_weighted_count_black = monotonic() - start
 
     attackers_centipawn_white = chess_analysis.get_pieces_centipawn_sum(board, attackers_white)
@@ -1008,9 +1004,7 @@ def compute_move_optimized(engine, board, mv, ply_number, time, prev_score, best
                                                                                       attacked_guarded_pieces_white)
     unopposed_threats_centipawn_white = chess_analysis.get_pieces_centipawn_sum(board, unopposed_threats_white)
     start = monotonic()
-    threats_centipawn_white = chess_analysis.compute_threats_weighted(board,
-                                                                      attack_moves_white,
-                                                                      guard_moves_white,
+    threats_centipawn_white = chess_analysis.compute_threats_weighted(board, attack_moves_white,
                                                                       attacked_guarded_pieces_white)
     t_threats_centipawn_white = monotonic() - start
 
@@ -1022,9 +1016,7 @@ def compute_move_optimized(engine, board, mv, ply_number, time, prev_score, best
                                                                                       attacked_guarded_pieces_black)
     unopposed_threats_centipawn_black = chess_analysis.get_pieces_centipawn_sum(board, unopposed_threats_black)
     start = monotonic()
-    threats_centipawn_black = chess_analysis.compute_threats_weighted(board,
-                                                                      attack_moves_black,
-                                                                      guard_moves_black,
+    threats_centipawn_black = chess_analysis.compute_threats_weighted(board, attack_moves_black,
                                                                       attacked_guarded_pieces_black)
     t_threats_centipawn_black = monotonic() - start
 
@@ -1074,6 +1066,7 @@ def compute_move_optimized(engine, board, mv, ply_number, time, prev_score, best
         is_capture=t_is_capture,
         is_castling=t_is_castling,
         possible_moves_count=t_possible_moves_count,
+        possible_moves_quality=t_possible_moves_quality,
         captures=t_captures,
         is_capture_count=t_is_capture_count,
         is_capture_weighted=t_is_capture_weighted,

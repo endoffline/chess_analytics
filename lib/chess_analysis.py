@@ -209,20 +209,17 @@ def compute_legal_move_scores(engine, board, time):
     return move_scores
 
 
-# introduce tolerance of 30 to 50 centipawn
 def compute_possible_moves_quality(engine, board, time, curr_score):
     move_scores = compute_legal_move_scores(engine, board, time)
-
+    tolerance = 25  # inaccuracy / 2
     good_scores_count = 0
     for score, move in move_scores:
-        if (board.turn == chess.WHITE and score >= curr_score) or (board.turn == chess.BLACK and score <= curr_score):
+        if (board.turn == chess.WHITE and score >= (curr_score - tolerance)) \
+                or (board.turn == chess.BLACK and score <= (curr_score + tolerance)):
             good_scores_count += 1
-    if board.turn == chess.WHITE:
-        print("white")
-    else:
-        print("black")
+
     pieces = board.piece_map()
-    print("score: ", curr_score, " scores: ", [(i, board.san(j), pieces[j.from_square].symbol()) for i, j in move_scores])
+    print("move quality: score: ", curr_score, " scores: ", [(i, board.san(j), pieces[j.from_square].symbol()) for i, j in move_scores])
     return good_scores_count
 
 
@@ -251,11 +248,11 @@ def compute_best_move_by_depth(engine, board, depth):
 def categorize_best_move_score_diff(best_move_score_diff, best_move, actual_move):
     category = 1
 
-    if best_move_score_diff >= 200:
+    if best_move_score_diff >= 300:
         category = 4
-    elif best_move_score_diff >= 90:
+    elif best_move_score_diff >= 100:
         category = 3
-    elif best_move_score_diff >= 40:
+    elif best_move_score_diff >= 50:
         category = 2
     elif best_move == actual_move:
         category = 0
@@ -267,14 +264,14 @@ def compute_is_capture_weighted(board, move):
     value = 0
     if board.is_capture(move):
         already_deducted = False
-        value = get_piece_centipawn(board, move.to_square)
+        value = get_piece_centipawn(board, move.to_square, True)
         previous_move = board.pop()
-        if board.is_capture(previous_move) and previous_move.to_square == move.to_square:
-            value -= get_piece_centipawn(board, previous_move.to_square)
+        if board.is_capture(previous_move) and previous_move.to_square == move.to_square:  # exchange
+            value -= get_piece_centipawn(board, previous_move.to_square, False)
             already_deducted = True
         board.push(previous_move)
-        if not already_deducted and len(board.attackers(not board.turn, move.to_square)) > 0:
-            value -= get_piece_centipawn(board, move.from_square)
+        if not already_deducted and len(board.attackers(not board.turn, move.to_square)) > 0:  # guarded
+            value -= get_piece_centipawn(board, move.from_square, False)
 
     return value
 
@@ -507,9 +504,9 @@ def compute_material_centipawn(board):
     material_white = compute_material_for_color(board, chess.WHITE)
     material_black = compute_material_for_color(board, chess.BLACK)
 
-    print("Material white: ", get_pieces_centipawn_sum(board, material_white), ", ", material_white)
-    print("Material black: ", get_pieces_centipawn_sum(board, material_black), ", ", material_black)
-    return get_pieces_centipawn_sum(board, material_white) - get_pieces_centipawn_sum(board, material_black)
+    print("Material white: ", get_pieces_centipawn_sum(board, material_white, False), ", ", material_white)
+    print("Material black: ", get_pieces_centipawn_sum(board, material_black, False), ", ", material_black)
+    return get_pieces_centipawn_sum(board, material_white, False) - get_pieces_centipawn_sum(board, material_black, False)
 
 
 # This method should determine the change in scores between two moves
@@ -527,6 +524,25 @@ def compute_score_change_category(diff):
     return diff / 50
 
 
+def compute_fork(board, color, square, piece):
+    forking_square = None
+    if piece.color == color:
+        attacked_squares = board.attacks(square)
+        attacked_count = 0
+        for attacked_square in attacked_squares:
+            if board.color_at(attacked_square) is (not color):
+                # only consider defended pieces with higher value or undefended pieces
+                if len(compute_guard_moves_for_one_piece(board, attacked_square)) > 0:
+                    if get_piece_centipawn(board, attacked_square, True) > get_piece_centipawn(board, square, True):
+                        attacked_count += 1
+                else:
+                    attacked_count += 1
+        if attacked_count > 1:
+            print("fork by ", piece, " on ", get_square_name(square))
+            forking_square = square
+    return forking_square
+
+
 def compute_forks(board, color):
     pieces = board.piece_map()
 
@@ -539,7 +555,7 @@ def compute_forks(board, color):
                 if board.color_at(attacked_square) is (not color):
                     # only consider pieces with defended pieces with higher value or undefended pieces
                     if len(compute_guard_moves_for_one_piece(board, attacked_square)) > 0:
-                        if get_piece_centipawn(board, attacked_square) > get_piece_centipawn(board, square):
+                        if get_piece_centipawn(board, attacked_square, True) > get_piece_centipawn(board, square, True):
                             attacked_count += 1
                     else:
                         attacked_count += 1
@@ -549,6 +565,7 @@ def compute_forks(board, color):
                 #    attacked_count += 1
             if attacked_count > 1:
                 print("fork by ", piece, " on ", get_square_name(square))
+                forking_squares.append(square)
             #if len(attacked_squares) > 1:
             #    print(get_square_names(attacked_squares))
             #    forking_squares.append(square)
@@ -556,7 +573,6 @@ def compute_forks(board, color):
     return forking_squares
 
 
-# todo rethink return parameter
 def compute_xray_attacks_weighted(board, color):
     c_board = copy.deepcopy(board)
     attack_moves = compute_attack_moves(c_board, color)
@@ -567,14 +583,14 @@ def compute_xray_attacks_weighted(board, color):
         attacked_square = move.to_square
         # check if attacking piece is a sliding piece (bishop, rook, queen)
         if c_board.piece_type_at(attacker) in [chess.BISHOP, chess.ROOK, chess.QUEEN]:
-            attacked_piece_value = get_piece_centipawn(c_board, attacked_square)
+            attacked_piece_value = get_piece_centipawn(c_board, attacked_square, True)
             attacked_piece = c_board.remove_piece_at(attacked_square)
             altered_attack_moves = compute_attack_moves_for_one_piece(c_board, attacker)
 
             xray = [a for a in altered_attack_moves if a not in attack_moves]
 
             if xray:
-                indirectly_attacked_piece_value = get_piece_centipawn(c_board, xray[0].to_square)
+                indirectly_attacked_piece_value = get_piece_centipawn(c_board, xray[0].to_square, True)
 
                 if indirectly_attacked_piece_value > attacked_piece_value:
                     # pin
@@ -588,6 +604,31 @@ def compute_xray_attacks_weighted(board, color):
     return value
 
 
+def compute_xray_attacks_for_single_move(board, attack_moves, move):
+    pin_move = None
+    skewer_move = None
+    attacker = move.from_square
+    attacked_square = move.to_square
+    # check if attacking piece is a sliding piece (bishop, rook, queen)
+    if board.piece_type_at(attacker) in [chess.BISHOP, chess.ROOK, chess.QUEEN]:
+        attacked_piece_value = get_piece_centipawn(board, attacked_square, True)
+        attacked_piece = board.remove_piece_at(attacked_square)
+        altered_attack_moves = compute_attack_moves_for_one_piece(board, attacker)
+
+        xray = [a for a in altered_attack_moves if a not in attack_moves]
+
+        if xray:
+            indirectly_attacked_piece_value = get_piece_centipawn(board, xray[0].to_square, True)
+
+            if indirectly_attacked_piece_value > attacked_piece_value:
+                pin_move = move
+            else:
+                skewer_move = move
+        board.set_piece_at(attacked_square, attacked_piece)
+
+    return pin_move, skewer_move
+
+
 # calculates the number of pins and skewers
 def compute_xray_attack_moves(board, color):
     c_board = copy.deepcopy(board)
@@ -599,15 +640,15 @@ def compute_xray_attack_moves(board, color):
         attacker = move.from_square
         attacked_square = move.to_square
         # check if attacking piece is a sliding piece (bishop, rook, queen)
-        if c_board.piece_type_at(attacker) in [3, 4, 5]:
-            attacked_piece_value = get_piece_centipawn(c_board, attacked_square)
+        if c_board.piece_type_at(attacker) in [chess.BISHOP, chess.ROOK, chess.QUEEN]:
+            attacked_piece_value = get_piece_centipawn(c_board, attacked_square, True)
             attacked_piece = c_board.remove_piece_at(attacked_square)
             altered_attack_moves = compute_attack_moves_for_one_piece(c_board, attacker)
 
             xray = [a for a in altered_attack_moves if a not in attack_moves]
 
             if xray:
-                indirectly_attacked_piece_value = get_piece_centipawn(c_board, xray[0].to_square)
+                indirectly_attacked_piece_value = get_piece_centipawn(c_board, xray[0].to_square, True)
 
                 if indirectly_attacked_piece_value > attacked_piece_value:
                     pin_moves.append(move)
@@ -617,46 +658,31 @@ def compute_xray_attack_moves(board, color):
     return pin_moves, skewer_moves
 
 
-# proposal include centipawn for threatened piece, least valuable attacker and least valuable defender
-def compute_threats_weighted(board, attack_moves, guard_moves, threatened_guarded_squares):
+# proposal include centipawn for threatened piece and least valuable attacker if threatened piece is guarded
+def compute_threats_weighted(board, attack_moves, threatened_guarded_squares):
     value = 0
-    # attack_dict = set()
     attack_dict = defaultdict(list)
-    guard_dict = defaultdict(list)
     for attack_move in attack_moves:
         if attack_move.to_square in threatened_guarded_squares:
-            attack_dict[attack_move.to_square].append(attack_move.from_square)
+            if get_piece_centipawn(board, attack_move.to_square, True) > get_piece_centipawn(board, attack_move.from_square, True):
+                attack_dict[attack_move.to_square].append(attack_move.from_square)
         else:
-            value += get_piece_centipawn(board, attack_move.to_square)
+            value += get_piece_centipawn(board, attack_move.to_square, True)
 
-    for guard_move in guard_moves:
-        if guard_move.to_square in threatened_guarded_squares:
-            attack_dict[attack_move.to_square].append(guard_move.from_square)
-
-        # if attack_move.to_square not in guarded_squares:
-        #    value += compute_piece_centipawn(board, attack_move.to_square)
-        # else:
-            # attack_dict.add(attack_move.from_square)
-            # attack_dict[attack_move.to_square].append(attack_move.from_square)
-
-    # if len(attack_dict) > 0:
-    #    value -= compute_pieces_centipawn_sum(board, attack_dict) / len(attack_dict)
-    already_deducted_attacking_squares = set()
     for guarded_square, attacking_squares in attack_dict.items():
-        value -= min(get_pieces_centipawn(board, attacking_squares))
+        value -= min(get_pieces_centipawn(board, attacking_squares, True))
         # value -= compute_pieces_centipawn_sum(board, attacking_squares) / len(attacking_squares)
-    # for guarded_square, guarding_squares in guard_dict.items():
-    #    value += min(compute_pieces_centipawn(board, guarding_squares))
 
     return value
 
 
 # proposal include centipawn for threatened piece, least valuable attacker and least valuable defender
-def compute_threat_moves_weighted(board, attack_moves, guard_moves, attacked_guarded_squares):
+def compute_threat_moves_weighted(board, attack_moves, attacked_guarded_squares):
     threat_moves = list()
     for attack_move in attack_moves:
+
         if attack_move.to_square in attacked_guarded_squares:
-            if get_piece_centipawn(board, attack_move.to_square) > get_piece_centipawn(board, attack_move.from_square):
+            if get_piece_centipawn(board, attack_move.to_square, True) > get_piece_centipawn(board, attack_move.from_square, True):
                 threat_moves.append(attack_move)
         else:
             threat_moves.append(attack_move)
@@ -691,15 +717,15 @@ def format_moves(moves):
     return [format_move(move) for move in moves]
 
 
-def get_piece_centipawn(board, square):
-    piece_values = [100, 300, 300, 500, 900, 2200]
+def get_piece_centipawn(board, square, include_king=False):
+    piece_values = [100, 300, 300, 500, 900, 2200 if include_king else 0]
     return piece_values[board.piece_at(square).piece_type-1]
 
 
-def get_pieces_centipawn(board, squares):
-    piece_values = [100, 300, 300, 500, 900, 2200]
+def get_pieces_centipawn(board, squares, include_king=False):
+    piece_values = [100, 300, 300, 500, 900, 2200 if include_king else 0]
     return [piece_values[board.piece_at(square).piece_type-1] for square in squares]
 
 
-def get_pieces_centipawn_sum(board, squares):
-    return sum(get_pieces_centipawn(board, squares))
+def get_pieces_centipawn_sum(board, squares, include_king=False):
+    return sum(get_pieces_centipawn(board, squares, include_king))
