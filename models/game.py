@@ -17,7 +17,7 @@ class Game(Base):
     whiteelo = Column(Integer)
     blackelo = Column(Integer)
     result = Column(String(10))
-
+    length = Column(Integer)
     moves = relationship("Move", order_by=Move.id, back_populates="game")
 
     def __repr__(self):

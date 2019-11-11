@@ -837,7 +837,7 @@ def compute_move_optimized(engine, board, mv, ply_number, time, prev_score, best
     t_possible_moves_count = monotonic() - start
 
     start = monotonic()
-    possible_moves_quality = chess_analysis.compute_possible_moves_quality(engine, board, time, score)
+    possible_moves_quality = 0  # chess_analysis.compute_possible_moves_quality(engine, board, time, score)
     t_possible_moves_quality = monotonic() - start
 
     start = monotonic()
@@ -1132,7 +1132,7 @@ def compute_move_optimized(engine, board, mv, ply_number, time, prev_score, best
         is_capture=is_capture,
         is_castling=is_castling,
         possible_moves_count=possible_moves_count,
-        possible_moves_quality=possible_moves_quality/possible_moves_count,
+        possible_moves_quality=possible_moves_quality/(possible_moves_count if possible_moves_count > 0 else 1),
         captures=', '.join(str(s) for s in chess_analysis.get_square_names(captures)),
         is_capture_count=is_capture_count,
         is_capture_weighted=is_capture_weighted,

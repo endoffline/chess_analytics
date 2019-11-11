@@ -719,12 +719,12 @@ def format_moves(moves):
 
 def get_piece_centipawn(board, square, include_king=False):
     piece_values = [100, 300, 300, 500, 900, 2200 if include_king else 0]
-    return piece_values[board.piece_at(square).piece_type-1]
+    return piece_values[(board.piece_at(square).piece_type-1) if board.piece_at(square) else 0] # check for en passant
 
 
 def get_pieces_centipawn(board, squares, include_king=False):
     piece_values = [100, 300, 300, 500, 900, 2200 if include_king else 0]
-    return [piece_values[board.piece_at(square).piece_type-1] for square in squares]
+    return [piece_values[(board.piece_at(square).piece_type-1) if board.piece_at(square) else 0] for square in squares]
 
 
 def get_pieces_centipawn_sum(board, squares, include_king=False):

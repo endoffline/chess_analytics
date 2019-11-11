@@ -9,7 +9,7 @@ from datetime import datetime, date
 
 
 def bulk_analyse(engine, session, act_game):
-    time = 0.100
+    time = 1.000
     # Get the intial board of the game
     board = act_game.board()
 
@@ -33,6 +33,7 @@ def bulk_analyse(engine, session, act_game):
     # Iterate through all moves and play them on a board.
     prev_score = 0
     best_move = None
+    ply_number = 0
     for ply_number, mv in enumerate(act_game.mainline_moves(), start=1):
         db_mv, best_move = chess_moves.compute_move_optimized(engine, board, mv, ply_number, time, prev_score, best_move)
         db_game.moves.append(db_mv)
@@ -42,6 +43,7 @@ def bulk_analyse(engine, session, act_game):
         # push actual move to the board again
         board.push(mv)
 
+    db_game.length = int(ply_number)
     session.add(db_game)
     session.commit()
 
@@ -56,9 +58,10 @@ def main():
     # Open PGN file
     # filename = "kasparov_karpov_1986"
     # filename = "kramnik_leko_2001"
-    filename = "lcc2017_mini"
+    # filename = "lcc2017_mini"
     # filename = "lcc2017"
     # filename = "adams_nepomniachtchi_2017"
+    filename = "lichess_db_standard_rated_20181231"
     chess_io.init_folder_structure(filename)
     pgn = chess_io.open_pgn(filename)
 
