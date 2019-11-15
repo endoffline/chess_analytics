@@ -16,7 +16,7 @@ def main():
     # filename = "tissir_dreev_2004"
     # filename = "short_vaganian_1989"
     filename = "smyslov_h_donner_1967"
-    chess_io.init_folder_structure(filename)
+    chess_io.init_folder_structure(filename)  # prepare folder structure for output
     pgn = chess_io.open_pgn(filename)
 
     # for i in range(35):
@@ -34,6 +34,7 @@ def main():
 
     counts = {
         "fullmove_number": [],  # stores the move numbers
+        "ply_number": [],
         "turn": [],
         "san": [],  # stores a move in Standard Algebraic Notation (SAN)
         "lan": [],  # stores a move in Long Algebraic Notation (LAN)
@@ -97,6 +98,7 @@ def main():
         "unopposed_threats_centipawn_all": [],
         "attack_defense_relation1": [],
         "attack_defense_relation2": [],
+        "material": [],
         "pawn_ending": [],  # stores if only kings and pawns are left on the board
         "rook_ending": [],  # stores if only kings, rooks and possible pawns are left on the board
         "threat_level": []
@@ -235,10 +237,12 @@ def main():
         rook_ending2 = chess_analysis.compute_rook_ending(board)
         print("rook_ending:",rook_ending,rook_ending2)
         print("Material: ", chess_analysis.compute_material_centipawn(board))
+        material = chess_analysis.compute_material_centipawn(board)
         prev_score = score
 
         # append parameters to the arrays
         counts["fullmove_number"].append(fullmove_number)
+        counts["ply_number"].append(ply_number)
         counts["turn"].append(turn)
         counts["san"].append(san)
         counts["lan"].append(lan)
@@ -305,6 +309,7 @@ def main():
         counts["unopposed_threats_centipawn_all"].append(unopposed_threats_centipawn_white+unopposed_threats_centipawn_black)
         counts["attack_defense_relation1"].append(attack_defense_relation1)
         counts["attack_defense_relation2"].append(attack_defense_relation2)
+        counts["material"].append(material)
         counts["pawn_ending"].append(pawn_ending)
         counts["rook_ending"].append(rook_ending)
         counts["threat_level"].append(str(possible_moves_quality) + "/" + str(possible_moves_count))

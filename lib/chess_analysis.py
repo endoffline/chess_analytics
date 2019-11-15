@@ -263,6 +263,21 @@ def categorize_best_move_score_diff(best_move_score_diff, best_move, actual_move
 def compute_is_capture_weighted(board, move):
     value = 0
     if board.is_capture(move):
+        value = get_piece_centipawn(board, move.to_square, True)
+        if len(board.attackers(not board.turn, move.to_square)) > 0:  # guarded
+            value -= get_piece_centipawn(board, move.from_square, False)
+        else:
+            previous_move = board.pop()
+            if board.is_capture(previous_move) and previous_move.to_square == move.to_square:  # exchange
+                value -= get_piece_centipawn(board, previous_move.to_square, False)
+            board.push(previous_move)
+
+    return value
+
+
+def compute_is_capture_weighted_old(board, move):
+    value = 0
+    if board.is_capture(move):
         already_deducted = False
         value = get_piece_centipawn(board, move.to_square, True)
         previous_move = board.pop()
@@ -274,7 +289,6 @@ def compute_is_capture_weighted(board, move):
             value -= get_piece_centipawn(board, move.from_square, False)
 
     return value
-
 
 def compute_attack_moves_for_one_piece(board, square):
     attack_moves = list()
@@ -482,11 +496,11 @@ def compute_attacked_guarded_pieces(attack_moves, guard_moves):
     return threatened_guarded_pieces
 
 
-def compute_unopposed_threats(threatened_pieces, guarded_pieces):
+def compute_unopposed_threats(attacked_pieces, guarded_pieces):
     unopposed_threats = set()
-    for threatened_piece in threatened_pieces:
-        if threatened_piece not in guarded_pieces:
-            unopposed_threats.add(threatened_piece)
+    for attacked_piece in attacked_pieces:
+        if attacked_piece not in guarded_pieces:
+            unopposed_threats.add(attacked_piece)
 
     return list(unopposed_threats)
 
@@ -659,11 +673,11 @@ def compute_xray_attack_moves(board, color):
 
 
 # proposal include centipawn for threatened piece and least valuable attacker if threatened piece is guarded
-def compute_threats_weighted(board, attack_moves, threatened_guarded_squares):
+def compute_threats_weighted(board, attack_moves, attacked_guarded_squares):
     value = 0
     attack_dict = defaultdict(list)
     for attack_move in attack_moves:
-        if attack_move.to_square in threatened_guarded_squares:
+        if attack_move.to_square in attacked_guarded_squares:
             if get_piece_centipawn(board, attack_move.to_square, True) > get_piece_centipawn(board, attack_move.from_square, True):
                 attack_dict[attack_move.to_square].append(attack_move.from_square)
         else:
