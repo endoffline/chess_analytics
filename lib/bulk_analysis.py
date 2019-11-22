@@ -66,13 +66,13 @@ def analyse(filename, engine, pgn):
         print("turn: ", board.turn)
         print("actual move: ", board.san(move), move)
 
-        a_score, a_best_move = chess_analysis.compute_score_alternative(engine, board)
+        a_score, a_best_move = chess_analysis.compute_score(engine, board)
         a_best_move_score = chess_analysis.compute_best_move_alternative(engine, board, a_best_move)
 
         # apply move
         board.push(move)
 
-        score = chess_analysis.compute_score(engine, board)
+        score = chess_analysis.compute_score_a(engine, board)
 
         counts["score"].append(score)
         counts["is_check"].append(board.is_check())

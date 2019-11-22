@@ -39,6 +39,10 @@ def compute_move(engine, board, mv, ply_number, times, depths, prev_score, best_
     t_is_capture = monotonic() - start
 
     start = monotonic()
+    is_capture_weighted = chess_analysis.compute_is_capture_weighted(board, mv)
+    t_is_capture_weighted = monotonic() - start
+
+    start = monotonic()
     is_castling = board.is_castling(mv)
     t_is_castling = monotonic() - start
 
@@ -47,25 +51,25 @@ def compute_move(engine, board, mv, ply_number, times, depths, prev_score, best_
 
     for time in times:
         start = monotonic()
-        score_a = chess_analysis.compute_score(engine, board, time)
+        score_a = chess_analysis.compute_score_a(engine, board, time)
         t_score_a = monotonic() - start
         scores_a.append(score_a)
         t_scores_a.append(t_score_a)
 
     for depth in depths:
         start = monotonic()
-        score_a = chess_analysis.compute_score_by_depth(engine, board, depth)
+        score_a = chess_analysis.compute_score_a_by_depth(engine, board, depth)
         t_score_a = monotonic() - start
         scores_a.append(score_a)
         t_scores_a.append(t_score_a)
 
     start = monotonic()
-    score_shift = chess_analysis.compute_score_change(prev_score, scores_a[3])
-    t_score_shift = monotonic() - start
+    score_change = chess_analysis.compute_score_change(prev_score, scores_a[3])
+    t_score_change = monotonic() - start
 
     start = monotonic()
-    score_shift_category = chess_analysis.compute_score_change_category(score_shift)
-    t_score_shift_category = monotonic() - start
+    score_change_category = chess_analysis.compute_score_change_category(score_change)
+    t_score_change_category = monotonic() - start
 
     start = monotonic()
     is_check = board.is_check()
@@ -74,6 +78,10 @@ def compute_move(engine, board, mv, ply_number, times, depths, prev_score, best_
     start = monotonic()
     possible_moves_count = chess_analysis.compute_move_count(board)
     t_possible_moves_count = monotonic() - start
+
+    start = monotonic()
+    possible_moves_quality = 0  # chess_analysis.compute_possible_moves_quality(engine, board, time, score)
+    t_possible_moves_quality = monotonic() - start
 
     start = monotonic()
     captures = chess_analysis.compute_possible_captures(board)
@@ -95,12 +103,12 @@ def compute_move(engine, board, mv, ply_number, times, depths, prev_score, best_
     t_attackers_count_white = monotonic() - start
 
     start = monotonic()
-    threatened_pieces_white = chess_analysis.get_to_square_pieces(attack_moves_white)
-    t_threatened_pieces_white = monotonic() - start
+    attacked_pieces_white = list(set(chess_analysis.get_to_square_pieces(attack_moves_white)))
+    t_attacked_pieces_white = monotonic() - start
 
     start = monotonic()
-    threatened_pieces_count_white = len(threatened_pieces_white)
-    t_threatened_pieces_count_white = monotonic() - start
+    attacked_pieces_count_white = len(attacked_pieces_white)
+    t_attacked_pieces_count_white = monotonic() - start
 
     start = monotonic()
     guard_moves_white = chess_analysis.compute_guard_moves(board, chess.WHITE)
@@ -112,7 +120,7 @@ def compute_move(engine, board, mv, ply_number, times, depths, prev_score, best_
     t_guards_count_white = monotonic() - start
 
     start = monotonic()
-    guarded_pieces_white = chess_analysis.get_to_square_pieces(guard_moves_white)
+    guarded_pieces_white = list(set(chess_analysis.get_to_square_pieces(guard_moves_white)))
     t_guarded_pieces_white = monotonic() - start
 
     start = monotonic()
@@ -120,21 +128,42 @@ def compute_move(engine, board, mv, ply_number, times, depths, prev_score, best_
     t_guarded_pieces_count_white = monotonic() - start
 
     start = monotonic()
-    threatened_guarded_pieces_white = chess_analysis.compute_attacked_guarded_pieces(attack_moves_white,
-                                                                                     guard_moves_white)
+    attacked_guarded_pieces_white = chess_analysis.compute_attacked_guarded_pieces(attack_moves_white,
+                                                                                   guard_moves_white)
     t_threatened_guarded_pieces_white = monotonic() - start
 
     start = monotonic()
-    threatened_guarded_pieces_count_white = len(threatened_guarded_pieces_white)
+    attacked_guarded_pieces_count_white = len(attacked_guarded_pieces_white)
     t_threatened_guarded_pieces_count_white = monotonic() - start
 
     start = monotonic()
-    unopposed_threats_white = chess_analysis.compute_unopposed_threats(threatened_pieces_white, guarded_pieces_white)
+    unopposed_threats_white = chess_analysis.compute_unopposed_threats(attacked_pieces_white, guarded_pieces_white)
     t_unopposed_threats_white = monotonic() - start
 
     start = monotonic()
     unopposed_threats_count_white = len(unopposed_threats_white)
     t_unopposed_threats_count_white = monotonic() - start
+
+    start = monotonic()
+    forking_pieces_white = chess_analysis.compute_forks(board, chess.WHITE)
+    t_forking_pieces_white = monotonic() - start
+
+    start = monotonic()
+    fork_count_white = len(forking_pieces_white)
+    t_fork_count_white = t_forking_pieces_white + monotonic() - start
+
+    start = monotonic()
+    pin_moves_white, skewer_moves_white = chess_analysis.compute_xray_attack_moves(board, chess.WHITE)
+    t_pin_count_white = monotonic() - start
+    t_skewer_count_white = t_pin_count_white
+
+    pin_count_white = len(pin_moves_white)
+    skewer_count_white = len(skewer_moves_white)
+
+    start = monotonic()
+    threats_weighted_count_white = len(
+        chess_analysis.compute_threat_moves_weighted(board, attack_moves_white, attacked_guarded_pieces_white))
+    t_threats_weighted_count_white = monotonic() - start
 
     # Black player
     start = monotonic()
@@ -147,12 +176,12 @@ def compute_move(engine, board, mv, ply_number, times, depths, prev_score, best_
     t_attackers_count_black = monotonic() - start
 
     start = monotonic()
-    threatened_pieces_black = chess_analysis.get_to_square_pieces(attack_moves_black)
-    t_threatened_pieces_black = monotonic() - start
+    attacked_pieces_black = list(set(chess_analysis.get_to_square_pieces(attack_moves_black)))
+    t_attacked_pieces_black = monotonic() - start
 
     start = monotonic()
-    threatened_pieces_count_black = len(threatened_pieces_black)
-    t_threatened_pieces_count_black = monotonic() - start
+    attacked_pieces_count_black = len(attacked_pieces_black)
+    t_attacked_pieces_count_black = monotonic() - start
 
     start = monotonic()
     guard_moves_black = chess_analysis.compute_guard_moves(board, chess.BLACK)
@@ -164,7 +193,7 @@ def compute_move(engine, board, mv, ply_number, times, depths, prev_score, best_
     t_guards_count_black = monotonic() - start
 
     start = monotonic()
-    guarded_pieces_black = chess_analysis.get_to_square_pieces(guard_moves_black)
+    guarded_pieces_black = list(set(chess_analysis.get_to_square_pieces(guard_moves_black)))
     t_guarded_pieces_black = monotonic() - start
 
     start = monotonic()
@@ -172,38 +201,67 @@ def compute_move(engine, board, mv, ply_number, times, depths, prev_score, best_
     t_guarded_pieces_count_black = monotonic() - start
 
     start = monotonic()
-    threatened_guarded_pieces_black = chess_analysis.compute_attacked_guarded_pieces(attack_moves_black,
-                                                                                     guard_moves_black)
-    t_threatened_guarded_pieces_black = monotonic() - start
+    attacked_guarded_pieces_black = chess_analysis.compute_attacked_guarded_pieces(attack_moves_black,
+                                                                                   guard_moves_black)
+    t_attacked_guarded_pieces_black = monotonic() - start
 
     start = monotonic()
-    threatened_guarded_pieces_count_black = len(threatened_guarded_pieces_black)
-    t_threatened_guarded_pieces_count_black = monotonic() - start
+    attacked_guarded_pieces_count_black = len(attacked_guarded_pieces_black)
+    t_attacked_guarded_pieces_count_black = monotonic() - start
 
     start = monotonic()
-    unopposed_threats_black = chess_analysis.compute_unopposed_threats(threatened_pieces_black, guarded_pieces_black)
+    unopposed_threats_black = chess_analysis.compute_unopposed_threats(attacked_pieces_black, guarded_pieces_black)
     t_unopposed_threats_black = monotonic() - start
 
     start = monotonic()
     unopposed_threats_count_black = len(unopposed_threats_black)
     t_unopposed_threats_count_black = monotonic() - start
 
+    start = monotonic()
+    forking_pieces_black = chess_analysis.compute_forks(board, chess.BLACK)
+    t_forking_pieces_black = monotonic() - start
+
+    start = monotonic()
+    fork_count_black = len(forking_pieces_black)
+    t_fork_count_black = monotonic() - start
+
+    start = monotonic()
+    pin_moves_black, skewer_moves_black = chess_analysis.compute_xray_attack_moves(board, chess.BLACK)
+    t_pin_count_black = monotonic() - start
+    t_skewer_count_black = t_pin_count_black
+    pin_count_black = len(pin_moves_black)
+    skewer_count_black = len(skewer_moves_black)
+
+    start = monotonic()
+    threats_weighted_count_black = len(
+        chess_analysis.compute_threat_moves_weighted(board, attack_moves_black, attacked_guarded_pieces_black))
+    t_threats_weighted_count_black = monotonic() - start
+
     attackers_centipawn_white = chess_analysis.get_pieces_centipawn_sum(board, attackers_white)
     start = monotonic()
-    threatened_pieces_centipawn_white = chess_analysis.get_pieces_centipawn_sum(board, threatened_pieces_white)
-    t_threatened_pieces_centipawn_white = monotonic() - start
+    attacked_pieces_centipawn_white = chess_analysis.get_pieces_centipawn_sum(board, attacked_pieces_white)
+    t_attacked_pieces_centipawn_white = monotonic() - start
     guards_centipawn_white = chess_analysis.get_pieces_centipawn_sum(board, guards_white)
     guarded_pieces_centipawn_white = chess_analysis.get_pieces_centipawn_sum(board, guarded_pieces_white)
-    threatened_guarded_pieces_centipawn_white = chess_analysis.get_pieces_centipawn_sum(board,
-                                                                                        threatened_guarded_pieces_white)
+    attacked_guarded_pieces_centipawn_white = chess_analysis.get_pieces_centipawn_sum(board,
+                                                                                      attacked_guarded_pieces_white)
     unopposed_threats_centipawn_white = chess_analysis.get_pieces_centipawn_sum(board, unopposed_threats_white)
+    start = monotonic()
+    threats_centipawn_white = chess_analysis.compute_threats_weighted(board, attack_moves_white,
+                                                                      attacked_guarded_pieces_white)
+    t_threats_centipawn_white = monotonic() - start
+
     attackers_centipawn_black = chess_analysis.get_pieces_centipawn_sum(board, attackers_black)
-    threatened_pieces_centipawn_black = chess_analysis.get_pieces_centipawn_sum(board, threatened_pieces_black)
+    attacked_pieces_centipawn_black = chess_analysis.get_pieces_centipawn_sum(board, attacked_pieces_black)
     guards_centipawn_black = chess_analysis.get_pieces_centipawn_sum(board, guards_black)
     guarded_pieces_centipawn_black = chess_analysis.get_pieces_centipawn_sum(board, guarded_pieces_black)
-    threatened_guarded_pieces_centipawn_black = chess_analysis.get_pieces_centipawn_sum(board,
-                                                                                        threatened_guarded_pieces_black)
+    attacked_guarded_pieces_centipawn_black = chess_analysis.get_pieces_centipawn_sum(board,
+                                                                                      attacked_guarded_pieces_black)
     unopposed_threats_centipawn_black = chess_analysis.get_pieces_centipawn_sum(board, unopposed_threats_black)
+    start = monotonic()
+    threats_centipawn_black = chess_analysis.compute_threats_weighted(board, attack_moves_black,
+                                                                      attacked_guarded_pieces_black)
+    t_threats_centipawn_black = monotonic() - start
 
     start = monotonic()
     attack_defense_relation1 = chess_analysis.compute_attack_defense_relation_centipawn1(board)
@@ -212,21 +270,26 @@ def compute_move(engine, board, mv, ply_number, times, depths, prev_score, best_
     start = monotonic()
     attack_defense_relation2 = chess_analysis.compute_attack_defense_relation_centipawn2(guards_centipawn_white,
                                                                                          guarded_pieces_centipawn_white,
-                                                                                         threatened_pieces_centipawn_white,
+                                                                                         attacked_pieces_centipawn_white,
                                                                                          attackers_centipawn_white,
                                                                                          guards_centipawn_black,
                                                                                          guarded_pieces_centipawn_black,
-                                                                                         threatened_pieces_centipawn_black,
+                                                                                         attacked_pieces_centipawn_black,
                                                                                          attackers_centipawn_black)
     t_attack_defense_relation2 = monotonic() - start
 
     start = monotonic()
-    pawn_ending = chess_analysis.pawn_ending(board.fen())
+    material = chess_analysis.compute_material_centipawn(board)
+    t_material = monotonic() - start
+
+    start = monotonic()
+    pawn_ending = chess_analysis.compute_pawn_ending(board)
     t_pawn_ending = monotonic() - start
 
     start = monotonic()
-    rook_ending = chess_analysis.rook_ending(board.fen())
+    rook_ending = chess_analysis.compute_rook_ending(board)
     t_rook_ending = monotonic() - start
+
 
     board.pop()
 
@@ -238,7 +301,7 @@ def compute_move(engine, board, mv, ply_number, times, depths, prev_score, best_
         best_move_scores = chess_analysis.compute_legal_move_scores(engine, board, time)
 
         if len(best_move_scores) > 1:
-            best_move_scores.sort(key=lambda scores: scores[0], reverse=board.turn)
+            # best_move_scores.sort(key=lambda scores: scores[0], reverse=board.turn)
             best_move_score_a = best_move_scores[0][0]
             t_best_move_score_a = monotonic() - start
 
@@ -272,7 +335,7 @@ def compute_move(engine, board, mv, ply_number, times, depths, prev_score, best_
 
         if is_first_turn:
             start = monotonic()
-            not_needed, best_move_b = chess_analysis.compute_score_alternative(engine, board, time)
+            not_needed, best_move_b = chess_analysis.compute_score(engine, board, time)
             t_best_move_b = monotonic() - start
             best_moves_b.append(best_move_b)
         else:
@@ -280,13 +343,13 @@ def compute_move(engine, board, mv, ply_number, times, depths, prev_score, best_
 
         start = monotonic()
         board.push(mv)
-        score_b, next_best_move_b = chess_analysis.compute_score_alternative(engine, board, time)
+        score_b, next_best_move_b = chess_analysis.compute_score(engine, board, time)
         board.pop()
         t_score_b = monotonic() - start
         t_best_move_b = t_score_b
 
         start = monotonic()
-        best_move_score_b = chess_analysis.compute_best_move_score_alternative(engine, board, best_move_b, time)
+        best_move_score_b = chess_analysis.compute_best_move_score(engine, board, best_move_b, time)
         t_best_move_score_b = monotonic() - start
 
         start = monotonic()
@@ -316,7 +379,7 @@ def compute_move(engine, board, mv, ply_number, times, depths, prev_score, best_
     for i, depth in enumerate(depths):
         print("Depth: ", depth)
         start = monotonic()
-        best_move_scores = chess_analysis.compute_best_move_by_depth(engine, board, depth)
+        best_move_scores = chess_analysis.compute_legal_move_scores_by_depth(engine, board, depth)
 
         if len(best_move_scores) > 1:
             best_move_scores.sort(key=lambda scores: scores[0], reverse=board.turn)
@@ -353,7 +416,7 @@ def compute_move(engine, board, mv, ply_number, times, depths, prev_score, best_
 
         if is_first_turn:
             start = monotonic()
-            not_needed, best_move_b = chess_analysis.compute_score_alternative_by_depth(engine, board, depth)
+            not_needed, best_move_b = chess_analysis.compute_score_by_depth(engine, board, depth)
             t_best_move_b = monotonic() - start
             best_moves_b.append(best_move_b)
         else:
@@ -361,14 +424,14 @@ def compute_move(engine, board, mv, ply_number, times, depths, prev_score, best_
 
         start = monotonic()
         board.push(mv)
-        score_b, next_best_move_b = chess_analysis.compute_score_alternative_by_depth(engine, board, depth)
+        score_b, next_best_move_b = chess_analysis.compute_score_by_depth(engine, board, depth)
         board.pop()
         t_score_b = monotonic() - start
         t_best_move_b = t_score_b
 
         start = monotonic()
-        best_move_score_b = chess_analysis.compute_best_move_score_alternative_by_depth(engine, board, best_move_b,
-                                                                                        depth)
+        best_move_score_b = chess_analysis.compute_best_move_score_by_depth(engine, board, best_move_b,
+                                                                            depth)
         t_best_move_score_b = monotonic() - start
 
         start = monotonic()
@@ -634,8 +697,8 @@ def compute_move(engine, board, mv, ply_number, times, depths, prev_score, best_
         san=t_san,
         lan=t_lan,
         score=t_scores_a[3],
-        score_shift=t_score_shift,
-        score_shift_category=t_score_shift_category,
+        score_change=t_score_change,
+        score_change_category=t_score_change_category,
         move_count=t_move_count,
         best_move=t_best_moves_a[3],
         best_move_score=t_best_move_scores_a[3],
@@ -645,35 +708,50 @@ def compute_move(engine, board, mv, ply_number, times, depths, prev_score, best_
         is_capture=t_is_capture,
         is_castling=t_is_castling,
         possible_moves_count=t_possible_moves_count,
+        possible_moves_quality=t_possible_moves_quality,
         captures=t_captures,
         is_capture_count=t_is_capture_count,
+        is_capture_weighted=t_is_capture_weighted,
         attackers_white=t_attackers_white,
         attackers_count_white=t_attackers_count_white,
-        threatened_pieces_white=t_threatened_pieces_white,
-        threatened_pieces_count_white=t_threatened_pieces_count_white,
+        attacked_pieces_white=t_attacked_pieces_white,
+        attacked_pieces_count_white=t_attacked_pieces_count_white,
         guards_white=t_guards_white,
         guards_count_white=t_guards_count_white,
         guarded_pieces_white=t_guarded_pieces_white,
         guarded_pieces_count_white=t_guarded_pieces_count_white,
-        threatened_guarded_pieces_white=t_threatened_guarded_pieces_white,
-        threatened_guarded_pieces_count_white=t_threatened_guarded_pieces_count_white,
+        attacked_guarded_pieces_white=t_threatened_guarded_pieces_white,
+        attacked_guarded_pieces_count_white=t_threatened_guarded_pieces_count_white,
         unopposed_threats_white=t_unopposed_threats_white,
         unopposed_threats_count_white=t_unopposed_threats_count_white,
+        threats_count_white=t_threats_weighted_count_white,
+        forking_pieces_white=t_forking_pieces_white,
+        fork_count_white=t_fork_count_white,
+        pin_count_white=t_pin_count_white,
+        skewer_count_white=t_skewer_count_white,
         attackers_black=t_attackers_black,
         attackers_count_black=t_attackers_count_black,
-        threatened_pieces_black=t_threatened_pieces_black,
-        threatened_pieces_count_black=t_threatened_pieces_count_black,
+        attacked_pieces_black=t_attacked_pieces_black,
+        attacked_pieces_count_black=t_attacked_pieces_count_black,
         guards_black=t_guards_black,
         guards_count_black=t_guards_count_black,
         guarded_pieces_black=t_guarded_pieces_black,
         guarded_pieces_count_black=t_guarded_pieces_count_black,
-        threatened_guarded_pieces_black=t_threatened_guarded_pieces_black,
-        threatened_guarded_pieces_count_black=t_threatened_guarded_pieces_count_black,
+        attacked_guarded_pieces_black=t_attacked_guarded_pieces_black,
+        attacked_guarded_pieces_count_black=t_attacked_guarded_pieces_count_black,
         unopposed_threats_black=t_unopposed_threats_black,
         unopposed_threats_count_black=t_unopposed_threats_count_black,
-        threatened_pieces_centipawn_white=t_threatened_pieces_centipawn_white,
+        threats_count_black=t_threats_weighted_count_black,
+        forking_pieces_black=t_forking_pieces_black,
+        fork_count_black=t_fork_count_black,
+        pin_count_black=t_pin_count_black,
+        skewer_count_black=t_skewer_count_black,
+        attacked_pieces_centipawn_white=t_attacked_pieces_centipawn_white,
+        threats_centipawn_white=t_threats_centipawn_white,
+        threats_centipawn_black=t_threats_centipawn_black,
         attack_defense_relation1=t_attack_defense_relation1,
         attack_defense_relation2=t_attack_defense_relation2,
+        material=t_material,
         pawn_ending=t_pawn_ending,
         rook_ending=t_rook_ending,
         time=move_runtime
@@ -686,8 +764,8 @@ def compute_move(engine, board, mv, ply_number, times, depths, prev_score, best_
         san=san,
         lan=lan,
         score=scores_a[3],
-        score_shift=score_shift,
-        score_shift_category=score_shift_category,
+        score_change=score_change,
+        score_change_category=score_change_category,
         move_count=move_count,
         best_move=best_moves_a[3],
         best_move_score=best_move_scores_a[3],
@@ -697,58 +775,78 @@ def compute_move(engine, board, mv, ply_number, times, depths, prev_score, best_
         is_capture=is_capture,
         is_castling=is_castling,
         possible_moves_count=possible_moves_count,
+        possible_moves_quality=possible_moves_quality/(possible_moves_count if possible_moves_count > 0 else 1),
         captures=', '.join(str(s) for s in chess_analysis.get_square_names(captures)),
         is_capture_count=is_capture_count,
+        is_capture_weighted=is_capture_weighted,
         attackers_white=', '.join(str(s) for s in chess_analysis.get_square_names(attackers_white)),
         attackers_count_white=attackers_count_white,
-        threatened_pieces_white=', '.join(str(s) for s in chess_analysis.get_square_names(threatened_pieces_white)),
-        threatened_pieces_count_white=threatened_pieces_count_white,
+        attacked_pieces_white=', '.join(str(s) for s in chess_analysis.get_square_names(attacked_pieces_white)),
+        attacked_pieces_count_white=attacked_pieces_count_white,
         guards_white=', '.join(str(s) for s in chess_analysis.get_square_names(guards_white)),
         guards_count_white=guards_count_white,
         guarded_pieces_white=', '.join(str(s) for s in chess_analysis.get_square_names(guarded_pieces_white)),
         guarded_pieces_count_white=guarded_pieces_count_white,
-        threatened_guarded_pieces_white=', '.join(
-            str(s) for s in chess_analysis.get_square_names(threatened_guarded_pieces_white)),
-        threatened_guarded_pieces_count_white=threatened_guarded_pieces_count_white,
+        attacked_guarded_pieces_white=', '.join(
+            str(s) for s in chess_analysis.get_square_names(attacked_guarded_pieces_white)),
+        attacked_guarded_pieces_count_white=attacked_guarded_pieces_count_white,
         unopposed_threats_white=', '.join(str(s) for s in chess_analysis.get_square_names(unopposed_threats_white)),
         unopposed_threats_count_white=unopposed_threats_count_white,
+        threats_count_white=threats_weighted_count_white,
+        forking_pieces_white=', '.join(str(s) for s in chess_analysis.get_square_names(forking_pieces_white)),
+        fork_count_white=fork_count_white,
+        pin_count_white=pin_count_white,
+        skewer_count_white=skewer_count_white,
         attackers_black=', '.join(str(s) for s in chess_analysis.get_square_names(attackers_black)),
         attackers_count_black=attackers_count_black,
-        threatened_pieces_black=', '.join(str(s) for s in chess_analysis.get_square_names(threatened_pieces_black)),
-        threatened_pieces_count_black=threatened_pieces_count_black,
+        attacked_pieces_black=', '.join(str(s) for s in chess_analysis.get_square_names(attacked_pieces_black)),
+        attacked_pieces_count_black=attacked_pieces_count_black,
         guards_black=', '.join(str(s) for s in chess_analysis.get_square_names(guards_black)),
         guards_count_black=guards_count_black,
         guarded_pieces_black=', '.join(str(s) for s in chess_analysis.get_square_names(guarded_pieces_black)),
         guarded_pieces_count_black=guarded_pieces_count_black,
-        threatened_guarded_pieces_black=', '.join(
-            str(s) for s in chess_analysis.get_square_names(threatened_guarded_pieces_black)),
-        threatened_guarded_pieces_count_black=threatened_guarded_pieces_count_black,
+        attacked_guarded_pieces_black=', '.join(
+            str(s) for s in chess_analysis.get_square_names(attacked_guarded_pieces_black)),
+        attacked_guarded_pieces_count_black=attacked_guarded_pieces_count_black,
         unopposed_threats_black=', '.join(str(s) for s in chess_analysis.get_square_names(unopposed_threats_black)),
         unopposed_threats_count_black=unopposed_threats_count_black,
+        threats_count_black=threats_weighted_count_black,
+        forking_pieces_black=', '.join(str(s) for s in chess_analysis.get_square_names(forking_pieces_black)),
+        fork_count_black=fork_count_black,
+        pin_count_black=pin_count_black,
+        skewer_count_black=skewer_count_black,
         attackers_centipawn_white=attackers_centipawn_white,
-        threatened_pieces_centipawn_white=threatened_pieces_centipawn_white,
+        attacked_pieces_centipawn_white=attacked_pieces_centipawn_white,
         guards_centipawn_white=guards_centipawn_white,
         guarded_pieces_centipawn_white=guarded_pieces_centipawn_white,
-        threatened_guarded_pieces_centipawn_white=threatened_guarded_pieces_centipawn_white,
+        attacked_guarded_pieces_centipawn_white=attacked_guarded_pieces_centipawn_white,
         unopposed_threats_centipawn_white=unopposed_threats_centipawn_white,
+        threats_centipawn_white=threats_centipawn_white,
         attackers_centipawn_black=attackers_centipawn_black,
-        threatened_pieces_centipawn_black=threatened_pieces_centipawn_black,
+        attacked_pieces_centipawn_black=attacked_pieces_centipawn_black,
         guards_centipawn_black=guards_centipawn_black,
         guarded_pieces_centipawn_black=guarded_pieces_centipawn_black,
-        threatened_guarded_pieces_centipawn_black=threatened_guarded_pieces_centipawn_black,
+        attacked_guarded_pieces_centipawn_black=attacked_guarded_pieces_centipawn_black,
         unopposed_threats_centipawn_black=unopposed_threats_centipawn_black,
+        threats_centipawn_black=threats_centipawn_black,
         attackers_count_all=attackers_count_white + attackers_count_black,
-        threatened_pieces_count_all=threatened_pieces_count_white + threatened_pieces_count_black,
+        attacked_pieces_count_all=attacked_pieces_count_white + attacked_pieces_count_black,
         guards_count_all=guards_count_white + guards_count_black,
         guarded_pieces_count_all=guarded_pieces_count_white + guarded_pieces_count_black,
-        threatened_guarded_pieces_count_all=threatened_guarded_pieces_count_white + threatened_guarded_pieces_count_black,
+        attacked_guarded_pieces_count_all=attacked_guarded_pieces_count_white + attacked_guarded_pieces_count_black,
         unopposed_threats_count_all=unopposed_threats_count_white + unopposed_threats_count_black,
-        threatened_pieces_centipawn_all=threatened_pieces_centipawn_white + threatened_pieces_centipawn_black,
+        threats_count_all=threats_weighted_count_white + threats_weighted_count_black,
+        fork_count_all=fork_count_white + fork_count_black,
+        pin_count_all=pin_count_white + pin_count_black,
+        skewer_count_all=skewer_count_white + skewer_count_black,
+        attacked_pieces_centipawn_all=attacked_pieces_centipawn_white + attacked_pieces_centipawn_black,
         guarded_pieces_centipawn_all=guarded_pieces_centipawn_white + guarded_pieces_centipawn_black,
-        threatened_guarded_pieces_centipawn_all=threatened_guarded_pieces_centipawn_white + threatened_guarded_pieces_centipawn_black,
+        attacked_guarded_pieces_centipawn_all=attacked_guarded_pieces_centipawn_white + attacked_guarded_pieces_centipawn_black,
         unopposed_threats_centipawn_all=unopposed_threats_centipawn_white + unopposed_threats_centipawn_black,
+        threats_centipawn_all=threats_centipawn_white - threats_centipawn_black,
         attack_defense_relation1=attack_defense_relation1,
         attack_defense_relation2=attack_defense_relation2,
+        material=material,
         pawn_ending=pawn_ending,
         rook_ending=rook_ending,
         scores=db_score,
@@ -794,11 +892,11 @@ def compute_move_optimized(engine, board, mv, ply_number, time, prev_score, best
     t_best_move = -1
     if best_move is None:  # calculate best move for first turn
         start = monotonic()
-        not_needed, best_move = chess_analysis.compute_score_alternative(engine, board, time)
+        not_needed, best_move = chess_analysis.compute_score(engine, board, time)
         t_best_move = monotonic() - start
 
     start = monotonic()
-    best_move_score = chess_analysis.compute_best_move_score_alternative(engine, board, best_move, time)
+    best_move_score = chess_analysis.compute_best_move_score(engine, board, best_move, time)
     t_best_move_score = monotonic() - start
 
     best_move = board.san(best_move)
@@ -807,7 +905,7 @@ def compute_move_optimized(engine, board, mv, ply_number, time, prev_score, best
     board.push(mv)
 
     start = monotonic()
-    score, next_best_move = chess_analysis.compute_score_alternative(engine, board, time)
+    score, next_best_move = chess_analysis.compute_score(engine, board, time)
     t_score = monotonic() - start
     if t_best_move is -1:
         t_best_move = t_score
@@ -837,7 +935,7 @@ def compute_move_optimized(engine, board, mv, ply_number, time, prev_score, best
     t_possible_moves_count = monotonic() - start
 
     start = monotonic()
-    possible_moves_quality = 0  # chess_analysis.compute_possible_moves_quality(engine, board, time, score)
+    possible_moves_quality = chess_analysis.compute_possible_moves_quality(engine, board, time, score)
     t_possible_moves_quality = monotonic() - start
 
     start = monotonic()

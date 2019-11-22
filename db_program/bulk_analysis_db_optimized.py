@@ -56,17 +56,9 @@ def main():
     Session = sessionmaker(bind=db_engine)
     session = Session()
     # Open PGN file
-    # filename = "kasparov_karpov_1986"
-    # filename = "kramnik_leko_2001"
-    # filename = "lcc2017_mini"
-    # filename = "lcc2017"
-    # filename = "adams_nepomniachtchi_2017"
     filename = "lichess_db_standard_rated_20181231"
     chess_io.init_folder_structure(filename)
     pgn = chess_io.open_pgn(filename)
-
-    # for i in range(35):
-    #   act_game = chess.pgn.read_game(pgn)
 
     while True:
         act_game = chess.pgn.read_game(pgn)
@@ -74,7 +66,6 @@ def main():
             break
 
         bulk_analyse(chess_engine, session, act_game)
-
     session.close()
     chess_engine.quit()
 

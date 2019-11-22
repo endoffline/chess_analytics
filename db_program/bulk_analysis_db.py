@@ -5,15 +5,14 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from models.base import Base
 from models.game import Game
-from datetime import datetime
+from datetime import datetime, date
 
 
 def bulk_analyse(engine, session, act_game):
-    # time = 0.100
-    # times = [0.010, 0.020, 0.050, 0.100, 0.200, 0.500, 1.000, 2.000, 5.000]
+
     # times = [0.010, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001]
-    times = [0.010, 0.020, 0.050, 0.100, 0.200, 0.500, 1.000, 0.001, 0.001]
-    depths = [15, 20]
+    times = [0.010, 0.020, 0.050, 0.100, 0.200, 0.500, 1.000, 2.000, 0.001]
+    depths = [17, 20]
 
     # Get the intial board of the game
     board = act_game.board()
@@ -28,8 +27,8 @@ def bulk_analyse(engine, session, act_game):
                    round=act_game.headers["Round"],
                    white=act_game.headers["White"],
                    black=act_game.headers["Black"],
-                   whiteelo=act_game.headers["WhiteElo"],
-                   blackelo=act_game.headers["BlackElo"],
+                   whiteelo=(int(act_game.headers["WhiteElo"]) if act_game.headers["WhiteElo"].isdigit() else None),
+                   blackelo=(int(act_game.headers["BlackElo"]) if act_game.headers["BlackElo"].isdigit() else None),
                    result=act_game.headers["Result"]
                    )
 
@@ -39,7 +38,6 @@ def bulk_analyse(engine, session, act_game):
     prev_score = 0
     best_moves_b = []
     for ply_number, mv in enumerate(act_game.mainline_moves(), start=1):
-        print("new move ##################################")
         for i in range(0, 5):
             db_mv, temp_best_moves_b = chess_moves.compute_move(engine, board, mv, ply_number, times, depths, prev_score, best_moves_b)
             db_game.moves.append(db_mv)
@@ -49,6 +47,7 @@ def bulk_analyse(engine, session, act_game):
         # push actual move to the board again
         board.push(mv)
 
+    db_game.length = int(ply_number)
     session.add(db_game)
     session.commit()
 
@@ -56,19 +55,14 @@ def bulk_analyse(engine, session, act_game):
 def main():
 
     chess_engine = chess_analysis.connect_to_stockfish()
-    db_engine = create_engine('sqlite:///chess.db', echo=True)
+    db_engine = create_engine('sqlite:///bulk_analysis_' + date.today().strftime("%Y-%m-%d") + '.db', echo=True)
     Base.metadata.create_all(db_engine)
     Session = sessionmaker(bind=db_engine)
     session = Session()
     # Open PGN file
-    # filename = "kasparov_karpov_1986"
-    # filename = "kramnik_leko_2001"
     filename = "lcc2017_mini"
     chess_io.init_folder_structure(filename)
     pgn = chess_io.open_pgn(filename)
-
-    # for i in range(35):
-    #   act_game = chess.pgn.read_game(pgn)
 
     while True:
         act_game = chess.pgn.read_game(pgn)
@@ -76,7 +70,8 @@ def main():
             break
 
         bulk_analyse(chess_engine, session, act_game)
-
+    session.close()
+    chess_engine.quit()
 
 main()
 
