@@ -98,9 +98,9 @@ def plot_graph(act_game, filename, counts):
 
     trace3 = go.Scatter(
         mode='markers+lines',
-        y=counts["threats_weighted_white"],
+        y=counts["threats_centipawn_white"],
         # y = score_history,
-        name='threats_weighted_white',
+        name='threats_centipawn_white',
 
         line=dict(
             color=('green'),
@@ -110,9 +110,9 @@ def plot_graph(act_game, filename, counts):
 
     trace4 = go.Scatter(
         mode='markers+lines',
-        y=counts["threats_weighted_black"],
+        y=counts["threats_centipawn_black"],
         # y = score_history,
-        name='threats_weighted_black',
+        name='threats_centipawn_black',
 
         line=dict(
             color=('blue'),
