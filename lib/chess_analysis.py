@@ -16,6 +16,7 @@ def read_game(pgn):
     return chess.pgn.read_game(pgn)
 
 
+# Get list of pieces on the board
 def get_pieces_list(board):
     pieces = dict()
     pieces[chess.PAWN] = board.pieces(chess.PAWN, chess.WHITE).union(board.pieces(chess.PAWN, chess.BLACK))
@@ -28,6 +29,7 @@ def get_pieces_list(board):
     return pieces
 
 
+# Determines pawn end game is present
 def compute_pawn_ending(board):
     p = get_pieces_list(board)
 
@@ -38,6 +40,7 @@ def compute_pawn_ending(board):
            len(p[chess.QUEEN]) == 0
 
 
+# Determines pawn end game is present
 def compute_rook_ending(board):
     p = get_pieces_list(board)
 
@@ -48,11 +51,30 @@ def compute_rook_ending(board):
            len(p[chess.QUEEN]) == 0
 
 
+# Calculates the available legal moves
 def compute_move_count(board):
     return len([i for i in board.legal_moves])
 
 
-# Calculates the score for a move
+# Calculates the score and best move for a move by time
+def compute_score(engine, board, time):
+    play = engine.play(board=board, limit=chess.engine.Limit(time=time), info=Info.ALL)
+    score = play.info.get('score').white().score()
+    if score is None:
+        score = 0
+    return score, play.move
+
+
+# Calculates the score and best move for a move by depth
+def compute_score_by_depth(engine, board, depth):
+    play = engine.play(board=board, limit=chess.engine.Limit(depth=depth), info=Info.ALL)
+    score = play.info.get('score').white().score()
+    if score is None:
+        score = 0
+    return score, play.move
+
+
+# Calculates the score for a move by time, deprecated
 def compute_score_a(engine, board, time):
     info = engine.analyse(board, chess.engine.Limit(time=time), info=Info.ALL)
     if info.get("score"):
@@ -62,40 +84,17 @@ def compute_score_a(engine, board, time):
     return score
 
 
-# Calculates the score for a move
+# Calculates the score for a move by depth, deprecated
 def compute_score_a_by_depth(engine, board, depth):
-    # Start a search.
-    # engine.position(board)
-    # engine.go(movetime=100)
-    #play = engine.play(board=board, limit=chess.engine.Limit(time=0.100), info=Info.ALL)
-    #print(play)
-    #print(board.san(play.move))
-    #print(board.san(play.ponder))
     info = engine.analyse(board, chess.engine.Limit(depth=depth), info=Info.ALL)
     if info.get("score"):
         score = info.get("score").white().score()
     else:
         score = 0
-    # print("Score: ", score)
     return score
 
 
-def compute_score(engine, board, time):
-    play = engine.play(board=board, limit=chess.engine.Limit(time=time), info=Info.ALL)
-    score = play.info.get('score').white().score()
-    if score is None:
-        score = 0
-    return score, play.move
-
-
-def compute_score_by_depth(engine, board, depth):
-    play = engine.play(board=board, limit=chess.engine.Limit(depth=depth), info=Info.ALL)
-    score = play.info.get('score').white().score()
-    if score is None:
-        score = 0
-    return score, play.move
-
-
+# Calculates the score for the best move by time
 def compute_best_move_score(engine, board, move, time):
     board.push(move)
     info = engine.analyse(board=board, limit=chess.engine.Limit(time=time), info=Info.ALL)
@@ -106,6 +105,7 @@ def compute_best_move_score(engine, board, move, time):
     return score
 
 
+# Calculates the score for the best move by depth
 def compute_best_move_score_by_depth(engine, board, move, depth):
     board.push(move)
     info = engine.analyse(board=board, limit=chess.engine.Limit(depth=depth), info=Info.ALL)
@@ -116,7 +116,7 @@ def compute_best_move_score_by_depth(engine, board, move, depth):
     return score
 
 
-# Calculates the scores for all possible moves in the current turn
+# Calculates the scores for all possible legal moves in the current turn
 # and returns a list containing the scores and moves as tuple
 def compute_legal_move_scores(engine, board, time):
     move_scores = list()
@@ -126,10 +126,7 @@ def compute_legal_move_scores(engine, board, time):
         info = engine.analyse(board=board, limit=chess.engine.Limit(time=time), info=Info.ALL)
         score = info.get("score").white().score()
         if score is not None:
-            if board.turn == chess.WHITE:
-                move_scores.append(tuple((score, mov)))
-            elif board.turn == chess.BLACK:
-                move_scores.append(tuple((score, mov)))
+            move_scores.append(tuple((score, mov)))
         board.pop()
 
     move_scores.sort(key=lambda scores: scores[0], reverse=board.turn)
@@ -137,7 +134,7 @@ def compute_legal_move_scores(engine, board, time):
 
 
 # Calculates the scores for all possible moves in the current turn
-# and returns a list containing the scores and moves as tuple
+# and returns a sorted list containing the scores and moves as tuple
 def compute_legal_move_scores_by_depth(engine, board, depth):
     move_scores = list()
 
@@ -146,16 +143,14 @@ def compute_legal_move_scores_by_depth(engine, board, depth):
         info = engine.analyse(board, chess.engine.Limit(depth=depth), info=Info.ALL)
         score = info.get("score").white().score()
         if score is not None:
-            if board.turn == chess.WHITE:
-                move_scores.append(tuple((score, mov)))
-            elif board.turn == chess.BLACK:
-                move_scores.append(tuple((score, mov)))
+            move_scores.append(tuple((score, mov)))
         board.pop()
 
     move_scores.sort(key=lambda scores: scores[0], reverse=board.turn)
     return move_scores
 
 
+# Computes a list of legal moves which lead to an improved or equal score evaluation
 def compute_possible_moves_quality(engine, board, time, curr_score):
     move_scores = compute_legal_move_scores(engine, board, time)
     tolerance = 25  # inaccuracy / 2
@@ -166,7 +161,6 @@ def compute_possible_moves_quality(engine, board, time, curr_score):
             good_scores_count += 1
 
     pieces = board.piece_map()
-    print("move quality: score: ", curr_score, " scores: ", [(i, board.san(j), pieces[j.from_square].symbol()) for i, j in move_scores])
     return good_scores_count
 
 
@@ -186,6 +180,7 @@ def categorize_best_move_score_diff(best_move_score_diff, best_move, actual_move
     return category
 
 
+# Evaluates a captures and returns a positive or negative centipawn value if the capture was a win or loss of material
 def compute_is_capture_weighted(board, move):
     value = 0
     if board.is_capture(move):
@@ -201,23 +196,7 @@ def compute_is_capture_weighted(board, move):
     return value
 
 
-#deprecated
-def compute_is_capture_weighted_old(board, move):
-    value = 0
-    if board.is_capture(move):
-        already_deducted = False
-        value = get_piece_centipawn(board, move.to_square, True)
-        previous_move = board.pop()
-        if board.is_capture(previous_move) and previous_move.to_square == move.to_square:  # exchange
-            value -= get_piece_centipawn(board, previous_move.to_square, False)
-            already_deducted = True
-        board.push(previous_move)
-        if not already_deducted and len(board.attackers(not board.turn, move.to_square)) > 0:  # guarded
-            value -= get_piece_centipawn(board, move.from_square, False)
-
-    return value
-
-
+# # Determines the attacking moves for a given square
 def compute_attack_moves_for_one_piece(board, square):
     attack_moves = list()
     attacked_squares = [i for i in board.attacks(square) if board.color_at(i) is (not board.color_at(square))]
@@ -242,7 +221,7 @@ def compute_attack_moves(board, color):
     return attack_moves
 
 
-# generate guard moves for one square
+# Generate guard moves for a given square
 def compute_guard_moves_for_one_piece(board, square):
     guard_moves = list()
     guards = [i for i in board.attackers(board.color_at(square), square)]
@@ -251,9 +230,8 @@ def compute_guard_moves_for_one_piece(board, square):
     return guard_moves
 
 
-# generate defending moves for a player
+# Generate defending moves for a player
 def compute_guard_moves(board, color):
-    # loop over one colors pieces
     pieces = board.piece_map()
 
     guard_moves = list()
@@ -266,8 +244,9 @@ def compute_guard_moves(board, color):
     return guard_moves
 
 
-# Determines the attacking moves the given color can make
-# Determines how many pieces of the current player are being threatened by the opponent
+# Computes the attack defense relation and returns a centipawn value
+# The attack defense relation takes all pieces involved in an attack into account, including the attacked piece,
+# the attacker, the possible guards, and if the attacked piece is guarded
 def compute_attack_defense_relation_centipawn1(board):
     c_board = copy.deepcopy(board)
     # loop over one colors pieces
@@ -314,10 +293,12 @@ def compute_attack_defense_relation_centipawn2(guards_centipawn_white, guarded_p
                - attacked_pieces_centipawn_black - attackers_centipawn_black))
 
 
+# Determines the moves which lead to possible captures
 def compute_possible_captures(board):
     return [i for i in board.legal_moves if board.is_capture(i)]
 
 
+# Determines a list of pieces which are guarded as well as attacked
 def compute_attacked_guarded_pieces(attack_moves, guard_moves):
     threatened_guarded_pieces = list()
     for threatening_move in attack_moves:
@@ -329,6 +310,7 @@ def compute_attacked_guarded_pieces(attack_moves, guard_moves):
     return threatened_guarded_pieces
 
 
+# Determines a list of pieces which are undefended and attacked
 def compute_unopposed_threats(attacked_pieces, guarded_pieces):
     unopposed_threats = set()
     for attacked_piece in attacked_pieces:
@@ -338,6 +320,7 @@ def compute_unopposed_threats(attacked_pieces, guarded_pieces):
     return list(unopposed_threats)
 
 
+# Computes the centipawn values for one color's remaining pieces on the board
 def compute_material_for_color(board, color):
     pieces = board.piece_map()
     squares = list()
@@ -347,6 +330,7 @@ def compute_material_for_color(board, color):
     return squares
 
 
+# Compares the material for both players
 def compute_material_centipawn(board):
     material_white = compute_material_for_color(board, chess.WHITE)
     material_black = compute_material_for_color(board, chess.BLACK)
@@ -355,7 +339,6 @@ def compute_material_centipawn(board):
 
 
 # This method should determine the change in scores between two moves
-# It is therefore possible to determine which player benefits from the move
 def compute_score_change(prev_score, curr_score):
     if not prev_score:
         prev_score = 0
@@ -364,11 +347,14 @@ def compute_score_change(prev_score, curr_score):
     return abs(curr_score - prev_score)
 
 
+# This method evaluates if a move has an impact on the game,
+# a score change category > 1 means the move caused a greater score change than the median of score changes
 # 64 is the median score change from the analyzed 989 games
 def compute_score_change_category(diff):
     return diff / 64
 
 
+# Computes a fork for a square
 def compute_fork(board, color, square, piece):
     forking_square = None
     if piece.color == color:
@@ -387,6 +373,7 @@ def compute_fork(board, color, square, piece):
     return forking_square
 
 
+# Computes the forks a given color has on the board and returns the attackers' squares
 def compute_forks(board, color):
     pieces = board.piece_map()
 
@@ -411,6 +398,7 @@ def compute_forks(board, color):
     return forking_squares
 
 
+# Computes the a centipawn value for the in pins and skewers involved pieces of a given color
 def compute_xray_attacks_weighted(board, color):
     c_board = copy.deepcopy(board)
     attack_moves = compute_attack_moves(c_board, color)
@@ -438,6 +426,7 @@ def compute_xray_attacks_weighted(board, color):
     return value
 
 
+# Determines if a move is a pin or skewer
 def compute_xray_attacks_for_single_move(board, attack_moves, move):
     pin_move = None
     skewer_move = None
@@ -463,7 +452,7 @@ def compute_xray_attacks_for_single_move(board, attack_moves, move):
     return pin_move, skewer_move
 
 
-# calculates the number of pins and skewers
+# Calculates the number of pins and skewers for a given color on the board
 def compute_xray_attack_moves(board, color):
     c_board = copy.deepcopy(board)
     attack_moves = compute_attack_moves(c_board, color)
@@ -492,7 +481,7 @@ def compute_xray_attack_moves(board, color):
     return pin_moves, skewer_moves
 
 
-# proposal include centipawn for threatened piece and least valuable attacker if threatened piece is guarded
+# Determines the threats on the board for the given attack moves or a certain color and evaluates them with the pieces associated centipawn value
 def compute_threats_weighted(board, attack_moves, attacked_guarded_squares):
     value = 0
     attack_dict = defaultdict(list)
@@ -510,7 +499,7 @@ def compute_threats_weighted(board, attack_moves, attacked_guarded_squares):
     return value
 
 
-# proposal include centipawn for threatened piece, least valuable attacker and least valuable defender
+# Determines the threats on the board for the given attack moves of a certain color
 def compute_threat_moves_weighted(board, attack_moves, attacked_guarded_squares):
     threat_moves = list()
     for attack_move in attack_moves:

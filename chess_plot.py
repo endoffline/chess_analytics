@@ -1,9 +1,6 @@
 # use plotly to visualize the chess game in a line graph
 import plotly
-# import plotly.plotly as py
 import plotly.graph_objs as go
-import plotly.io as pio
-import numpy as np
 
 
 def plot_graph(act_game, filename, counts):
@@ -96,31 +93,7 @@ def plot_graph(act_game, filename, counts):
         )
     )
 
-    trace3 = go.Scatter(
-        mode='markers+lines',
-        y=counts["threats_centipawn_white"],
-        # y = score_history,
-        name='threats_centipawn_white',
-
-        line=dict(
-            color=('green'),
-            width=4,
-        )
-    )
-
-    trace4 = go.Scatter(
-        mode='markers+lines',
-        y=counts["threats_centipawn_black"],
-        # y = score_history,
-        name='threats_centipawn_black',
-
-        line=dict(
-            color=('blue'),
-            width=4,
-        )
-    )
-
-    data = [trace1, trace2, trace3, trace4]
+    data = [trace1, trace2]
 
     layout = dict(title=act_game.headers["Event"] + " / " + act_game.headers["White"] + " - "
                         + act_game.headers["Black"] + "  " + act_game.headers["Result"] + " / "

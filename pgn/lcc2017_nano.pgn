@@ -1,0 +1,14 @@
+[Event "London Chess Classic 2017"]
+[Site "London"]
+[Date "2017.12.01"]
+[Round "1.1"]
+[White "Carlsen, Magnus"]
+[Black "Caruana, Fabiano"]
+[Result "1/2-1/2"]
+[BlackElo "2780"]
+[WhiteElo "2874"]
+[LiveChessVersion "1.4.8"]
+[ECO "D27"]
+
+1. d4 {[%clk 1:40:30]} d5 {[%clk 1:40:30]} 2. c4 {[%clk 1:40:30]} dxc4
+{[%clk 1:40:30]}

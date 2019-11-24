@@ -10,16 +10,14 @@ def main():
     # Open PGN file
     # filename = "kasparov_karpov_1986"
     # filename = "kramnik_leko_2001"
-    # filename = "lcc2017"
     # filename = "dariushmoalemi_grumpy123us_2018"
     # filename = "tissir_dreev_2004"
     # filename = "short_vaganian_1989"
-    filename = "smyslov_h_donner_1967"
+    # filename = "smyslov_h_donner_1967"
+    filename = "capablanca_alekhine_1927"
+
     chess_io.init_folder_structure(filename)  # prepare folder structure for output
     pgn = chess_io.open_pgn(filename)
-
-    # for i in range(35):
-    #    act_game = chess.pgn.read_game(pgn)
 
     act_game = chess_analysis.read_game(pgn)
 
@@ -27,19 +25,15 @@ def main():
           " - " + act_game.headers["Black"] + "  " + act_game.headers["Result"] +
           " / " + act_game.headers["Date"])
 
-    # Register a standard info handler.
-    # info_handler = chess.uci.InfoHandler()
-    # engine.info_handlers.append(info_handler)
-
     counts = {
         "fullmove_number": [],  # stores the move numbers
-        "ply_number": [],
-        "turn": [],
+        "ply_number": [],  # number of plies
+        "turn": [],  # White = True, Black = False
         "san": [],  # stores a move in Standard Algebraic Notation (SAN)
         "lan": [],  # stores a move in Long Algebraic Notation (LAN)
         "score": [],  # stores the scores calculated by Stockfish
-        "score_change": [],
-        "score_change_category": [],
+        "score_change": [],  # stores the change of scores between the current and previous move
+        "score_change_category": [],  # stores the significance of the score change
         "move_count": [],  # stores the number of possible moves in this turn
         "best_move": [],  # stores the best move in SAN
         "best_move_score": [],  # stores the best move's score
@@ -49,28 +43,28 @@ def main():
         "is_capture": [],  # stores is the move actually captures a piece
         "is_castling": [],  # stores if the king has been castled
         "possible_moves_count": [],  # stores the number of possible moves for the next player
-        "possible_moves_quality": [],
-        "captures": [],
+        "possible_moves_quality": [],  # stores the probability of move to improve the Stockfish evaluation
+        "captures": [],  # stores the squares for every possible capture
         "is_capture_count": [],  # stores the number of possible captures
-        "is_capture_weighted": [],
+        "is_capture_weighted": [],  # stores the centipawn value for the possible captures
 
-        "attackers_white": [],
-        "attackers_count_white": [],  # stores the number of possible attacks/threats by the opponent
-        "attacked_pieces_white": [],
-        "attacked_pieces_count_white": [],
-        "guards_white": [],
+        "attackers_white": [],  # stores the square names for the pieces that attack White
+        "attackers_count_white": [],  # stores the number of attacks by the opponent
+        "attacked_pieces_white": [],  # stores the square names for the pieces attackd by the opponent
+        "attacked_pieces_count_white": [],  # stores the number of attacked squares for White
+        "guards_white": [],  # stores the squares of white pieces that guard other white pieces
         "guards_count_white": [],
-        "guarded_pieces_white": [],
+        "guarded_pieces_white": [],  # stores the squares guarded by white pieces
         "guarded_pieces_count_white": [],
-        "attacked_guarded_pieces_white": [],
+        "attacked_guarded_pieces_white": [],  # stores the squares, which are guarded by a white piece and attacked by a black piece
         "attacked_guarded_pieces_count_white": [],
-        "unopposed_threats_white": [],
+        "unopposed_threats_white": [],  # stores the squares for undefended threatened pieces for white
         "unopposed_threats_count_white": [],
-        "threats_count_white": [],
-        "forking_pieces_white": [],
-        "fork_count_white": [],
-        "pin_count_white": [],
-        "skewer_count_white": [],
+        "threats_count_white": [],  # stores the number of threats threatening white pieces
+        "forking_pieces_white": [],  # stores the squares for white pieces that create forks
+        "fork_count_white": [],  # stores the number of white pieces that create forks
+        "pin_count_white": [],  # stores the number of pins that attack white
+        "skewer_count_white": [],  # stores the number of skewers that attack white
         "attackers_black": [],
         "attackers_count_black": [],  # stores the number of possible attacks/threats by the opponent
         "attacked_pieces_black": [],
@@ -120,15 +114,15 @@ def main():
         "guarded_pieces_centipawn_all": [],
         "attacked_guarded_pieces_centipawn_all": [],
         "unopposed_threats_centipawn_all": [],
-        "threats_centipawn_all": [],
-        "attack_defense_relation1": [],
+        "threats_centipawn_all": [],  # stores and compares the centipawn values of threats for black and white
+        "attack_defense_relation1": [],  # stores the centipawn value of all in attacks involved pieces
         "attack_defense_relation2": [],
-        "material": [],
+        "material": [],  # stores the centipawn value for all remaining pieces on the board and compares the two sides
         "pawn_ending": [],  # stores if only kings and pawns are left on the board
         "rook_ending": [],  # stores if only kings, rooks and possible pawns are left on the board
     }
 
-    time = 0.010
+    time = 0.100
 
     # Get the intial board of the game
     board = act_game.board()
@@ -139,18 +133,14 @@ def main():
     score = 0
     best_move = None
     next_best_move = None
-    # Iterate through all moves and play them on a board.
 
+    # Iterate through all moves and play them on a board.
     for ply_number, mv in enumerate(act_game.mainline_moves(), start=1):
         print("ply: ", ply_number)
         # calculate opportunities before applying the move
         fullmove_number = board.fullmove_number
         turn = board.turn
         san = board.san(mv)
-        if board.turn == chess.WHITE:
-            print("side to move: white", board.turn, san)
-        else:
-            print("side to move: black", board.turn, san)
         lan = board.lan(mv)
         move_count = chess_analysis.compute_move_count(board)
         is_capture = board.is_capture(mv)
@@ -376,10 +366,7 @@ def main():
     SVG(chess.svg.board(board=board, size=400))
 
     chess_plot.plot_graph(act_game, filename, counts)
-    print("before csv")
-    print(counts)
     chess_io.write_dict_to_csv(filename, counts)
-    print("after csv")
     engine.quit()
     return 0
 

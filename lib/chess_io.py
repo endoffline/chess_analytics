@@ -1,7 +1,6 @@
 import os
 import csv
 import chess
-#gamename
 
 
 def create_path(path):
