@@ -249,8 +249,7 @@ def main():
         pawn_ending = chess_analysis.compute_pawn_ending(board)
         rook_ending = chess_analysis.compute_rook_ending(board)
 
-        best_move = next_best_move
-        prev_score = score
+
 
         # append parameters to the arrays
         counts["fullmove_number"].append(fullmove_number)
@@ -362,6 +361,9 @@ def main():
         print('actual_score: ', score)
         print('actual_best_move: ', best_move, ' best_score: ', best_move_score)
         print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+
+        best_move = next_best_move
+        prev_score = score
 
     SVG(chess.svg.board(board=board, size=400))
 
